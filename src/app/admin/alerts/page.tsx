@@ -187,6 +187,210 @@ const AdminAlertsPage = () => {
     );
   }
 
+  const renderAlerts = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-10">
+          <LoadingSpinner />
+          <span className="ml-2 text-sm text-slate-400">
+            Chargement des alertes…
+          </span>
+        </div>
+      );
+    }
+
+    if (!sortedAlerts.length) {
+      return (
+        <p className="text-sm text-slate-400">
+          Aucune alerte de similarité en attente. Tout est à jour.
+        </p>
+      );
+    }
+
+    return sortedAlerts.map((alert) => {
+      const newRecipe = alert.newRecipe;
+      const similarRecipe = alert.similarRecipe;
+
+      return (
+        <div
+          key={alert.id}
+          className="card flex flex-col gap-4 px-4 py-4 md:flex-row"
+        >
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>
+                Score de similarité :{" "}
+                <span className="font-semibold text-slate-100">
+                  {alert.similarity_score.toFixed(3)}
+                </span>
+              </span>
+              <span>
+                Créée le{" "}
+                {alert.created_at
+                  ? new Date(alert.created_at).toLocaleString()
+                  : "—"}
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                  Nouvelle recette
+                </h2>
+                {newRecipe ? (
+                  <div className="space-y-1">
+                    <Link
+                      href={`/admin/recipes/${newRecipe.id}/edit`}
+                      className="text-sm font-medium text-slate-100 hover:underline"
+                    >
+                      {newRecipe.title}
+                    </Link>
+                    <p className="text-xs text-slate-500">
+                      {newRecipe.slug}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Recette introuvable.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+                  Recette similaire
+                </h2>
+                {similarRecipe ? (
+                  <div className="space-y-1">
+                    <Link
+                      href={`/admin/recipes/${similarRecipe.id}/edit`}
+                      className="text-sm font-medium text-slate-100 hover:underline"
+                    >
+                      {similarRecipe.title}
+                    </Link>
+                    <p className="text-xs text-slate-500">
+                      {similarRecipe.slug}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Recette introuvable.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col justify-between gap-3 md:w-64">
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-xs"
+                disabled={
+                  resolveAsParentChild.isLoading ||
+                  resolveAsDifferent.isLoading ||
+                  mergeRecipes.isLoading ||
+                  !newRecipe ||
+                  !similarRecipe
+                }
+                onClick={() => {
+                  if (!newRecipe || !similarRecipe) return;
+                  resolveAsParentChild.mutate({
+                    alertId: alert.id,
+                    parentId: similarRecipe.id,
+                    childId: newRecipe.id
+                  });
+                }}
+              >
+                Marquer : nouvelle = variante de la recette existante
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-xs"
+                disabled={
+                  resolveAsParentChild.isLoading ||
+                  resolveAsDifferent.isLoading ||
+                  mergeRecipes.isLoading ||
+                  !newRecipe ||
+                  !similarRecipe
+                }
+                onClick={() => {
+                  if (!newRecipe || !similarRecipe) return;
+                  resolveAsParentChild.mutate({
+                    alertId: alert.id,
+                    parentId: newRecipe.id,
+                    childId: similarRecipe.id
+                  });
+                }}
+              >
+                Marquer : existante = variante de la nouvelle
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-xs text-red-300 hover:text-red-200"
+                disabled={
+                  resolveAsParentChild.isLoading ||
+                  resolveAsDifferent.isLoading ||
+                  mergeRecipes.isLoading
+                }
+                onClick={() => resolveAsDifferent.mutate(alert.id)}
+              >
+                Marquer comme différentes (rejeter)
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-xs"
+                disabled={
+                  mergeRecipes.isLoading ||
+                  !newRecipe ||
+                  !similarRecipe
+                }
+                onClick={() => {
+                  if (!newRecipe || !similarRecipe) return;
+                  mergeRecipes.mutate({
+                    alertId: alert.id,
+                    canonicalId: similarRecipe.id,
+                    duplicateId: newRecipe.id
+                  });
+                }}
+              >
+                Fusionner (garder la recette existante)
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-xs"
+                disabled={
+                  mergeRecipes.isLoading ||
+                  !newRecipe ||
+                  !similarRecipe
+                }
+                onClick={() => {
+                  if (!newRecipe || !similarRecipe) return;
+                  mergeRecipes.mutate({
+                    alertId: alert.id,
+                    canonicalId: newRecipe.id,
+                    duplicateId: similarRecipe.id
+                  });
+                }}
+              >
+                Fusionner (garder la nouvelle)
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -194,8 +398,8 @@ const AdminAlertsPage = () => {
           Alertes de similarité de recettes
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Comparez les recettes détectées comme similaires, marquez les variantes
-          parent/enfant ou rejetez les faux positifs.
+          Comparez les recettes détectées comme similaires, marquez les
+          variantes parent/enfant ou rejetez les faux positifs.
         </p>
         <p className="mt-1 text-xs text-slate-500">
           {isLoading
@@ -204,205 +408,7 @@ const AdminAlertsPage = () => {
         </p>
       </div>
 
-      <div className="space-y-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10">
-            <LoadingSpinner />
-            <span className="ml-2 text-sm text-slate-400">
-              Chargement des alertes…
-            </span>
-          </div>
-        ) : sortedAlerts.length === 0 ? (
-          <p className="text-sm text-slate-400">
-            Aucune alerte de similarité en attente. Tout est à jour.
-          </p>
-        ) : (
-          sortedAlerts.map((alert) => {
-            const newRecipe = alert.newRecipe;
-            const similarRecipe = alert.similarRecipe;
-
-            return (
-              <div
-                key={alert.id}
-                className="card flex flex-col gap-4 px-4 py-4 md:flex-row"
-              >
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>
-                      Score de similarité :{" "}
-                      <span className="font-semibold text-slate-100">
-                        {alert.similarity_score.toFixed(3)}
-                      </span>
-                    </span>
-                    <span>
-                      Créée le{" "}
-                      {alert.created_at
-                        ? new Date(alert.created_at).toLocaleString()
-                        : "—"}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-                        Nouvelle recette
-                      </h2>
-                      {newRecipe ? (
-                        <div className="space-y-1">
-                          <Link
-                            href={`/admin/recipes/${newRecipe.id}/edit`}
-                            className="text-sm font-medium text-slate-100 hover:underline"
-                          >
-                            {newRecipe.title}
-                          </Link>
-                          <p className="text-xs text-slate-500">
-                            {newRecipe.slug}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500">
-                          Recette introuvable.
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
-                        Recette similaire
-                      </h2>
-                      {similarRecipe ? (
-                        <div className="space-y-1">
-                          <Link
-                            href={`/admin/recipes/${similarRecipe.id}/edit`}
-                            className="text-sm font-medium text-slate-100 hover:underline"
-                          >
-                            {similarRecipe.title}
-                          </Link>
-                          <p className="text-xs text-slate-500">
-                            {similarRecipe.slug}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500">
-                          Recette introuvable.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex w-full flex-col justify-between gap-3 md:w-64">
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs"
-                      disabled={
-                        resolveAsParentChild.isLoading ||
-                        resolveAsDifferent.isLoading ||
-                        mergeRecipes.isLoading ||
-                        !newRecipe ||
-                        !similarRecipe
-                      }
-                      onClick={() => {
-                        if (!newRecipe || !similarRecipe) return;
-                        resolveAsParentChild.mutate({
-                          alertId: alert.id,
-                          parentId: similarRecipe.id,
-                          childId: newRecipe.id
-                        });
-                      }}
-                    >
-                      Marquer : nouvelle = variante de la recette existante
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs"
-                      disabled={
-                        resolveAsParentChild.isLoading ||
-                        resolveAsDifferent.isLoading ||
-                        mergeRecipes.isLoading ||
-                        !newRecipe ||
-                        !similarRecipe
-                      }
-                      onClick={() => {
-                        if (!newRecipe || !similarRecipe) return;
-                        resolveAsParentChild.mutate({
-                          alertId: alert.id,
-                          parentId: newRecipe.id,
-                          childId: similarRecipe.id
-                        });
-                      }}
-                    >
-                      Marquer : existante = variante de la nouvelle
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs text-red-300 hover:text-red-200"
-                      disabled={
-                        resolveAsParentChild.isLoading ||
-                        resolveAsDifferent.isLoading ||
-                        mergeRecipes.isLoading
-                      }
-                      onClick={() => resolveAsDifferent.mutate(alert.id)}
-                    >
-                      Marquer comme différentes (rejeter)
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs"
-                      disabled={
-                        mergeRecipes.isLoading ||
-                        !newRecipe ||
-                        !similarRecipe
-                      }
-                      onClick={() => {
-                        if (!newRecipe || !similarRecipe) return;
-                        // Par défaut : garder la recette existante comme canonique
-                        mergeRecipes.mutate({
-                          alertId: alert.id,
-                          canonicalId: similarRecipe.id,
-                          duplicateId: newRecipe.id
-                        });
-                      }}
-                    >
-                      Fusionner (garder la recette existante)
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="text-xs"
-                      disabled={
-                        mergeRecipes.isLoading ||
-                        !newRecipe ||
-                        !similarRecipe
-                      }
-                      onClick={() => {
-                        if (!newRecipe || !similarRecipe) return;
-                        // Variante : garder la nouvelle comme canonique
-                        mergeRecipes.mutate({
-                          alertId: alert.id,
-                          canonicalId: newRecipe.id,
-                          duplicateId: similarRecipe.id
-                        });
-                      }}
-                    >
-                      Fusionner (garder la nouvelle)
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        )}
-      </div>
+      <div className="space-y-3">{renderAlerts()}</div>
     </div>
   );
 };

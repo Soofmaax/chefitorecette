@@ -395,7 +395,10 @@ const AdminRecipesPage = () => {
     queryFn: fetchCuisines
   });
 
-  const recipes = data?.items ?? [];
+  const recipes = useMemo(
+    () => (data?.items ?? []).filter((r) => !!r.id),
+    [data]
+  );
   const total = data?.total ?? 0;
   const totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
   const recipeIds = useMemo(() => recipes.map((r) => r.id), [recipes]);
