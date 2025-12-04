@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase, getCurrentUser } from "@/lib/supabaseClient";
 import { cacheContentInRedis } from "@/lib/integrations";
+import { uploadRecipeImage } from "@/lib/storage";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -41,7 +42,15 @@ const NewRecipePage = () => {
         throw new Error("Utilisateur non connecté");
       }
 
-      // 1. Insérer la recette
+      // 1. Traiter l'upload d'image si fourni
+      let imageUrlToSave: string | null = values.image_url || null;
+
+      if (imageFile) {
+        const uploadedUrl = await uploadRecipeImage(imageFile, values.title);
+        imageUrlToSave = uploadedUrl;
+      }
+
+      // 2. Insérer la recette
       const payload = {
         title: values.title,
         description: values.description,
@@ -49,7 +58,7 @@ const NewRecipePage = () => {
         instructions: values.instructions,
         category: values.category,
         tags: values.tags,
-        image_url: values.image_url || null,
+        image_url: imageUrlToSave,
         user_id: user.id,
         embedding_status: "pending",
         created_at: new Date().toISOString()
@@ -253,6 +262,25 @@ const NewRecipePage = () => {
             {errors.image_url && (
               <p className="form-error">{errors.image_url.message}</p>
             )}
+          </div>
+
+          <div className="md:col-span-2">
+            <label htmlFor="image_file">Image (upload)</label>
+            <input
+              id="image_file"
+              type="file"
+              accept="image/*"
+              className="mt-1 w-full text-sm text-slate-200 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-100 hover:file:bg-slate-700"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setImageFile(file);
+              }}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Vous pouvez soit fournir une URL d&apos;image, soit uploader un
+              fichier. En cas d&apos;upload, le fichier sera stocké dans
+              Supabase Storage avec un nom basé sur le titre de la recette.
+            </p>
           </div>
         </div>
 
