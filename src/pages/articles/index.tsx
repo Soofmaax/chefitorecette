@@ -177,6 +177,12 @@ const ArticlesListPage = () => {
             </button>
           </div>
 
+          <Link href="/articles/completion" legacyBehavior>
+            <a>
+              <Button variant="secondary">Articles à compléter</Button>
+            </a>
+          </Link>
+
           <Link href="/articles/new" legacyBehavior>
             <a>
               <Button variant="primary">Nouvel article</Button>
