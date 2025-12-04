@@ -65,7 +65,7 @@ const isNonEmpty = (value: string | null | undefined) =>
 const AdminCreateRecipePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editorialId = searchParams.get("editorialId");
+  const editorialId = searchParams?.get("editorialId") ?? null;
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
