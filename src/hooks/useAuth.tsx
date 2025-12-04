@@ -8,11 +8,11 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
-type Role = "admin" | "editor" | null;
+export type Role = "admin" | "editor" | null;
 
-export interface AuthUser extends User {
-  role?: Role;
-}
+export type AuthUser = User & {
+  appRole: Role;
+};
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -35,7 +35,7 @@ async function fetchUserWithRole(user: User): Promise<AuthUser> {
 
   return {
     ...user,
-    role: (profile?.role as Role) ?? null
+    appRole: (profile?.role as Role) ?? null
   };
 }
 
@@ -64,14 +64,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const userWithRole = await fetchUserWithRole(session.user);
-        setUser(userWithRole);
-      } else {
-        setUser(null);
+    } = supabase.auth.onAuthStateChange(
+      async (_event: string, session: { user: User } | null) => {
+        if (session?.user) {
+          const userWithRole = await fetchUserWithRole(session.user);
+          setUser(userWithRole);
+        } else {
+          setUser(null);
+        }
       }
-    });
+    );
 
     return () => {
       subscription.unsubscribe();

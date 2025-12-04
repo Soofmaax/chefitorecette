@@ -1,7 +1,7 @@
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import "@/styles/globals.css";
+import "../styles/globals.css";
 import AppLayout from "@/components/layout/AppLayout";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";

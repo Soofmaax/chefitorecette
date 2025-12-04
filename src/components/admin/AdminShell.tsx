@@ -1,13 +1,64 @@
+"use client";
+
 import React, { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Menu, LogOut } from "lucide-react";
-import { Sidebar } from "./Sidebar";
+import { usePathname, useRouter } from "next/navigation";
 import { useUIStore } from "@/store/uiStore";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminSidebar } from "./AdminSidebar";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
-const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AdminShell: React.FC<{ children: React.ReactNode }> = ({
+  children
+}) => {
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUIStore();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isAdmin = user?.appRole === "admin";
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+        <div className="flex items-center gap-3">
+          <LoadingSpinner />
+          <span className="text-sm text-slate-400">
+            Chargement de la session…
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+        <div className="card max-w-md px-6 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold tracking-tight text-slate-100">
+            Accès restreint
+          </h1>
+          <p className="mb-4 text-sm text-slate-400">
+            Cette interface est réservée aux administrateurs. Connectez-vous
+            avec un compte disposant du rôle adéquat.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/auth/sign-in")}
+            className="inline-flex items-center justify-center rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+          >
+            Aller à la connexion
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const title =
+    pathname && pathname.startsWith("/admin")
+      ? "Admin Chefito – Recettes premium"
+      : "Interface d'administration";
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-50">
@@ -15,11 +66,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <aside className="hidden w-64 flex-col border-r border-slate-800 bg-slate-900/90 md:flex">
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
           <span className="text-sm font-semibold tracking-tight">
-            RAG Admin
+            Chefito Admin
           </span>
         </div>
         <div className="flex-1 p-4">
-          <Sidebar />
+          <AdminSidebar />
         </div>
         <div className="border-t border-slate-800 px-4 py-3 text-xs text-slate-400">
           {user?.email}
@@ -58,7 +109,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Dialog.Panel className="relative flex w-64 flex-col border-r border-slate-800 bg-slate-900">
                 <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
                   <span className="text-sm font-semibold tracking-tight">
-                    RAG Admin
+                    Chefito Admin
                   </span>
                   <button
                     onClick={closeSidebar}
@@ -69,7 +120,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   </button>
                 </div>
                 <div className="flex-1 p-4">
-                  <Sidebar onNavigate={closeSidebar} />
+                  <AdminSidebar onNavigate={closeSidebar} />
                 </div>
               </Dialog.Panel>
             </Transition.Child>
@@ -88,13 +139,16 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="text-sm font-semibold tracking-tight text-slate-100">
-              Interface d’administration RAG
+              {title}
             </h1>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
             {user && <span>{user.email}</span>}
             <button
-              onClick={signOut}
+              onClick={async () => {
+                await signOut();
+                router.push("/auth/sign-in");
+              }}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
             >
               <LogOut className="h-3 w-3" />
@@ -112,5 +166,3 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     </div>
   );
 };
-
-export default AppLayout;

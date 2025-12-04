@@ -1,8 +1,9 @@
 import { useAuth } from "./useAuth";
+import type { Role } from "./useAuth";
 
 export const usePermissions = () => {
   const { user } = useAuth();
-  const role = (user as any)?.role as "admin" | "editor" | null;
+  const role: Role = user?.appRole ?? null;
 
   return {
     user,
