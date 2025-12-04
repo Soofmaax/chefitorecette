@@ -169,7 +169,24 @@ En prod :
   - Remplir tous les champs premium + ingrédients normalisés + steps enrichies + concepts.
   - Passer le statut en `published` → succès.
 
-### 5.2. RAG & intégrations
+### 5.2. Flux Auth / Mot de passe
+
+- [ ] **Connexion email + mot de passe**
+  - Aller sur `/auth/sign-in`.
+  - Se connecter avec un compte admin (`user_profiles.role = 'admin'`).
+  - Vérifier que la redirection vers `/admin/recipes` ou `/admin/dashboard` fonctionne.
+- [ ] **Mot de passe oublié**
+  - Depuis `/auth/sign-in`, cliquer sur “Mot de passe oublié ? Réinitialiser”.
+  - Sur `/auth/reset-password-request`, saisir l’email d’un compte existant.
+  - Vérifier que l’email de reset est bien reçu et que le lien pointe vers le domaine Vercel (et non localhost).
+- [ ] **Définir un nouveau mot de passe**
+  - Depuis l’email, cliquer sur le lien de réinitialisation.
+  - Vérifier que la page `/auth/reset-password` s’affiche et que le lien est accepté (pas d’erreur “lien expiré”).
+  - Saisir un nouveau mot de passe + confirmation (utiliser le bouton “Afficher/Masquer” pour vérifier la saisie).
+  - Valider, attendre la confirmation, puis vérifier la redirection vers `/auth/sign-in`.
+  - Se reconnecter avec l’email et le **nouveau** mot de passe.
+
+### 5.3. RAG & intégrations
 
 - [ ] **Ingrédients normalisés**
   - Sur `/admin/recipes/[id]/edit`, onglet Ingrédients structurés.
