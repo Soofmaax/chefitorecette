@@ -13,6 +13,7 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Recettes", href: "/recipes", icon: Utensils },
   { name: "Articles", href: "/articles", icon: Newspaper },
+  { name: "Recherche", href: "/search", icon: Newspaper },
   { name: "Utilisateurs", href: "/users", icon: Users },
   { name: "Paramètres", href: "/settings", icon: Settings }
 ];

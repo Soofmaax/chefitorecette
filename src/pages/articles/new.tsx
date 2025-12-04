@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { articleSchema, ArticleFormValues } from "@/types/forms";
 import { supabase, getCurrentUser } from "@/lib/supabaseClient";
 import { generateSlug } from "@/lib/slug";
+import { extractTextFromHTML } from "@/lib/text";
+import { cacheContentInRedis } from "@/lib/integrations";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -42,14 +44,16 @@ const NewArticlePage = () => {
 
       const slug = generateSlug(values.title);
 
+      // 1. Insertion dans la table posts
       const payload = {
         ...values,
         slug,
         user_id: user.id,
-        enrichment_status: "pending"
+        enrichment_status: "pending",
+        status: values.status === "published" ? "published" : "draft"
       };
 
-      const { data, error } = await supabase
+      const { data: article, error } = await supabase
         .from("posts")
         .insert([payload])
         .select()
@@ -59,8 +63,52 @@ const NewArticlePage = () => {
         throw error;
       }
 
+      // 2. Cache Redis du contenu textuel pour accès rapide
+      const contentForCache = {
+        id: article.id,
+        title: article.title,
+        excerpt: article.excerpt,
+        content_text: extractTextFromHTML(article.content_html),
+        tags: article.tags,
+        category: article.category,
+        created_at: article.created_at
+      };
+
+      const cacheKey = `content:${article.id}`;
+      await cacheContentInRedis(cacheKey, contentForCache);
+
+      // 3. Déclenchement de l'enrichissement (Edge Function RAG)
+      const { data: enrichmentData, error: enrichmentError } =
+        await supabase.functions.invoke("generate-post-embedding", {
+          body: { post_id: article.id, post_data: values }
+        });
+
+      if (enrichmentError) {
+        throw enrichmentError;
+      }
+
+      const enrichmentResponse = enrichmentData as any;
+
+      // 4. Mise à jour du statut et des métadonnées S3/cache
+      const { error: updateError } = await supabase
+        .from("posts")
+        .update({
+          s3_vector_key: enrichmentResponse?.s3Key ?? null,
+          cache_key: cacheKey,
+          enrichment_status: enrichmentResponse?.success ? "completed" : "failed",
+          published_at:
+            values.status === "published"
+              ? new Date().toISOString()
+              : null
+        })
+        .eq("id", article.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
       setMessage(
-        "Article créé avec succès. L’enrichissement (texte, points clés, thèmes, contexte culturel, embedding) sera effectué automatiquement."
+        "Article créé et enrichissement RAG déclenché (embedding, S3, cache Redis)."
       );
       reset({
         title: "",
@@ -71,7 +119,7 @@ const NewArticlePage = () => {
         tags: []
       });
       // eslint-disable-next-line no-console
-      console.log("Article créé :", data);
+      console.log("Article créé :", article, enrichmentResponse);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
@@ -88,9 +136,9 @@ const NewArticlePage = () => {
           Nouvel article
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Créez un article. Le contenu sera automatiquement enrichi côté
-          Supabase (extraction de texte, points clés, thèmes, contexte
-          culturel, embedding).
+          Créez un article. Le contenu sera automatiquement enrichi par le
+          système RAG (texte, points clés, thèmes, contexte culturel,
+          embeddings S3, cache Redis).
         </p>
       </div>
 

@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase, getCurrentUser } from "@/lib/supabaseClient";
+import { cacheContentInRedis } from "@/lib/integrations";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -40,6 +41,7 @@ const NewRecipePage = () => {
         throw new Error("Utilisateur non connecté");
       }
 
+      // 1. Insérer la recette
       const payload = {
         title: values.title,
         description: values.description,
@@ -49,10 +51,11 @@ const NewRecipePage = () => {
         tags: values.tags,
         image_url: values.image_url || null,
         user_id: user.id,
+        embedding_status: "pending",
         created_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      const { data: recipe, error } = await supabase
         .from("recipes")
         .insert([payload])
         .select()
@@ -62,8 +65,41 @@ const NewRecipePage = () => {
         throw error;
       }
 
+      // 2. Déclencher la génération d’embedding + stockage S3
+      const { data: embeddingData, error: embeddingError } =
+        await supabase.functions.invoke("generate-recipe-embedding", {
+          body: { recipe_id: recipe.id, recipe_data: values }
+        });
+
+      if (embeddingError) {
+        throw embeddingError;
+      }
+
+      const embeddingResponse = embeddingData as any;
+
+      // 3. Mise à jour du statut dans la table recipes
+      const { error: updateError } = await supabase
+        .from("recipes")
+        .update({
+          s3_vector_key: embeddingResponse?.s3Key ?? null,
+          embedding_status: embeddingResponse?.success ? "completed" : "failed"
+        })
+        .eq("id", recipe.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // 4. Cache Redis pour accès rapide
+      const cacheKey = `recipe:${recipe.id}`;
+      await cacheContentInRedis(cacheKey, {
+        ...recipe,
+        embeddingGenerated: embeddingResponse?.success ?? false,
+        s3Stored: Boolean(embeddingResponse?.s3Key)
+      });
+
       setMessage(
-        "Recette créée avec succès. L’embedding sera généré automatiquement par la fonction Edge."
+        "Recette créée, embedding généré et stocké (S3), cache Redis mis à jour."
       );
       reset({
         title: "",
@@ -74,9 +110,8 @@ const NewRecipePage = () => {
         tags: [],
         image_url: ""
       });
-      // data contient la recette insérée si besoin de l'utiliser
       // eslint-disable-next-line no-console
-      console.log("Recette créée :", data);
+      console.log("Recette créée :", recipe, embeddingResponse);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
@@ -93,8 +128,8 @@ const NewRecipePage = () => {
           Nouvelle recette
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Ajoutez une recette. Les embeddings seront générés automatiquement via
-          Supabase (Edge Functions / triggers).
+          Ajoutez une recette. Les embeddings seront générés par la fonction
+          Edge, stockés dans S3 et mis en cache via Redis.
         </p>
       </div>
 

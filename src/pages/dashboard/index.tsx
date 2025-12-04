@@ -55,11 +55,12 @@ const DashboardPage = () => {
           Dashboard RAG
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Vue d’ensemble des recettes, articles et utilisateurs gérés par le
-          système RAG.
+          Vue d’ensemble des recettes, articles, utilisateurs et intégrations
+          RAG (Redis, S3, Vault).
         </p>
       </div>
 
+      {/* Statistiques RAG principales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="card px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">
@@ -69,7 +70,7 @@ const DashboardPage = () => {
             {stats.totalRecipes}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {stats.recipesWithEmbedding} avec embedding
+            {stats.recipesWithVector} avec vecteur S3
           </p>
         </div>
 
@@ -81,7 +82,8 @@ const DashboardPage = () => {
             {stats.totalArticles}
           </p>
           <p className="mt-1 text-xs text-slate-400">
-            {stats.articlesEnriched} enrichis (RAG complété)
+            {stats.articlesWithVector} avec vecteur S3,{" "}
+            {stats.articlesCached} en cache Redis
           </p>
         </div>
 
@@ -99,25 +101,60 @@ const DashboardPage = () => {
 
         <div className="card px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">
-            État RAG
+            RAG &amp; Intégrations
           </p>
           <p className="mt-2 text-sm text-slate-200">
-            Statistiques basées sur les colonnes{" "}
-            <code className="rounded bg-slate-800/80 px-1">
-              embedding
-            </code>{" "}
-            et{" "}
-            <code className="rounded bg-slate-800/80 px-1">
-              enrichment_status
-            </code>
-            .
+            Vecteurs externalisés dans S3, contenu et résultats de recherche
+            mis en cache via Redis, métadonnées sensibles chiffrées dans Vault.
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Les fonctions Edge Supabase pilotent les embeddings et
-            enrichissements automatiques.
+            Les fonctions Edge Supabase orchestrent embeddings, cache, stockage
+            et chiffrement.
           </p>
         </div>
       </div>
+
+      {/* Métriques d'intégrations / performance */}
+      {stats.performance && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="card px-4 py-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Redis Cache
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-50">
+              {Math.round(stats.performance.cacheHitRatio * 100)}%
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Taux de hit cache estimé (hitRatio)
+            </p>
+          </div>
+
+          <div className="card px-4 py-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              S3 Vectors
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-50">
+              {stats.performance.s3StorageUsed}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Indicateur d’utilisation du stockage S3 (unité dépend de
+              l’implémentation de l’Edge Function).
+            </p>
+          </div>
+
+          <div className="card px-4 py-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Vault Security
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-50">
+              {stats.performance.encryptedData}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Objets chiffrés via Vault (rag_embeddings).
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
