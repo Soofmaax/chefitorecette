@@ -28,7 +28,7 @@ interface AlertWithRecipes extends SimilarityAlert {
   similarRecipe?: Recipe;
 }
 
-const fetchAlertsWithRecipes = async (): Promise&lt;AlertWithRecipes[]> => {
+const fetchAlertsWithRecipes = async (): Promise<AlertWithRecipes[]> => {
   const { data: alerts, error } = await supabase
     .from("recipe_similarity_alerts")
     .select(
@@ -62,7 +62,7 @@ const fetchAlertsWithRecipes = async (): Promise&lt;AlertWithRecipes[]> => {
     throw recipesError;
   }
 
-  const recipeMap = new Map&lt;string, Recipe>();
+  const recipeMap = new Map<string, Recipe>();
   (recipes as Recipe[]).forEach((r) => {
     recipeMap.set(r.id, r);
   });
@@ -81,7 +81,7 @@ const AdminAlertsPage = () => {
     data: alerts,
     isLoading,
     isError
-  } = useQuery&lt;AlertWithRecipes[]>({
+  } = useQuery<AlertWithRecipes[]>({
     queryKey: ["similarity-alerts"],
     queryFn: fetchAlertsWithRecipes
   });
@@ -194,29 +194,29 @@ const AdminAlertsPage = () => {
 
   if (isError) {
     return (
-      &lt;p className="text-sm text-red-300">
+      <p className="text-sm text-red-300">
         Impossible de charger les alertes de similarité.
-      &lt;/p>
+      </p>
     );
   }
 
   const renderAlerts = () => {
     if (isLoading) {
       return (
-        &lt;div className="flex items-center justify-center py-10">
-          &lt;LoadingSpinner />
-          &lt;span className="ml-2 text-sm text-slate-400">
+        <div className="flex items-center justify-center py-10">
+          <LoadingSpinner />
+          <span className="ml-2 text-sm text-slate-400">
             Chargement des alertes…
-          &lt;/span>
-        &lt;/div>
+          </span>
+        </div>
       );
     }
 
     if (!sortedAlerts.length) {
       return (
-        &lt;p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-400">
           Aucune alerte de similarité en attente. Tout est à jour.
-        &lt;/p>
+        </p>
       );
     }
 
@@ -225,78 +225,78 @@ const AdminAlertsPage = () => {
       const similarRecipe = alert.similarRecipe;
 
       return (
-        &lt;div
+        <div
           key={alert.id}
           className="card flex flex-col gap-4 px-4 py-4 md:flex-row"
         >
-          &lt;div className="flex-1 space-y-3">
-            &lt;div className="flex items-center justify-between text-xs text-slate-400">
-              &lt;span>
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>
                 Score de similarité :{" "}
-                &lt;span className="font-semibold text-slate-100">
+                <span className="font-semibold text-slate-100">
                   {alert.similarity_score.toFixed(3)}
-                &lt;/span>
-              &lt;/span>
-              &lt;span>
+                </span>
+              </span>
+              <span>
                 Créée le{" "}
                 {alert.created_at
                   ? new Date(alert.created_at).toLocaleString()
                   : "—"}
-              &lt;/span>
-            &lt;/div>
+              </span>
+            </div>
 
-            &lt;div className="grid gap-4 md:grid-cols-2">
-              &lt;div>
-                &lt;h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
                   Nouvelle recette
-                &lt;/h2>
+                </h2>
                 {newRecipe ? (
-                  &lt;div className="space-y-1">
-                    &lt;Link
+                  <div className="space-y-1">
+                    <Link
                       href={`/admin/recipes/${newRecipe.id}/edit`}
                       className="text-sm font-medium text-slate-100 hover:underline"
                     >
                       {newRecipe.title}
-                    &lt;/Link>
-                    &lt;p className="text-xs text-slate-500">
+                    </Link>
+                    <p className="text-xs text-slate-500">
                       {newRecipe.slug}
-                    &lt;/p>
-                  &lt;/div>
+                    </p>
+                  </div>
                 ) : (
-                  &lt;p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500">
                     Recette introuvable.
-                  &lt;/p>
+                  </p>
                 )}
-              &lt;/div>
+              </div>
 
-              &lt;div>
-                &lt;h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+              <div>
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
                   Recette similaire
-                &lt;/h2>
+                </h2>
                 {similarRecipe ? (
-                  &lt;div className="space-y-1">
-                    &lt;Link
+                  <div className="space-y-1">
+                    <Link
                       href={`/admin/recipes/${similarRecipe.id}/edit`}
                       className="text-sm font-medium text-slate-100 hover:underline"
                     >
                       {similarRecipe.title}
-                    &lt;/Link>
-                    &lt;p className="text-xs text-slate-500">
+                    </Link>
+                    <p className="text-xs text-slate-500">
                       {similarRecipe.slug}
-                    &lt;/p>
-                  &lt;/div>
+                    </p>
+                  </div>
                 ) : (
-                  &lt;p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500">
                     Recette introuvable.
-                  &lt;/p>
+                  </p>
                 )}
-              &lt;/div>
-            &lt;/div>
-          &lt;/div>
+              </div>
+            </div>
+          </div>
 
-          &lt;div className="flex w-full flex-col justify-between gap-3 md:w-64">
-            &lt;div className="flex flex-col gap-2">
-              &lt;Button
+          <div className="flex w-full flex-col justify-between gap-3 md:w-64">
+            <div className="flex flex-col gap-2">
+              <Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -317,9 +317,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Marquer : nouvelle = variante de la recette existante
-              &lt;/Button>
+              </Button>
 
-              &lt;Button
+              <Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -340,9 +340,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Marquer : existante = variante de la nouvelle
-              &lt;/Button>
+              </Button>
 
-              &lt;Button
+              <Button
                 type="button"
                 variant="secondary"
                 className="text-xs text-red-300 hover:text-red-200"
@@ -354,9 +354,9 @@ const AdminAlertsPage = () => {
                 onClick={() => resolveAsDifferent.mutate(alert.id)}
               >
                 Marquer comme différentes (rejeter)
-              &lt;/Button>
+              </Button>
 
-              &lt;Button
+              <Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -375,9 +375,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Fusionner (garder la recette existante)
-              &lt;/Button>
+              </Button>
 
-              &lt;Button
+              <Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -396,33 +396,33 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Fusionner (garder la nouvelle)
-              &lt;/Button>
-            &lt;/div>
-          &lt;/div>
-        &lt;/div>
+              </Button>
+            </div>
+          </div>
+        </div>
       );
     });
   };
 
   return (
-    &lt;div className="space-y-6">
-      &lt;div>
-        &lt;h1 className="text-xl font-semibold tracking-tight text-slate-50">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-50">
           Alertes de similarité de recettes
-        &lt;/h1>
-        &lt;p className="mt-1 text-sm text-slate-400">
+        </h1>
+        <p className="mt-1 text-sm text-slate-400">
           Comparez les recettes détectées comme similaires, marquez les
           variantes parent/enfant ou rejetez les faux positifs.
-        &lt;/p>
-        &lt;p className="mt-1 text-xs text-slate-500">
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
           {isLoading
             ? "Chargement des alertes…"
             : `${pendingCount} alerte(s) en attente ou en cours de revue.`}
-        &lt;/p>
-      &lt;/div>
+        </p>
+      </div>
 
-      &lt;div className="space-y-3">{renderAlerts()}&lt;/div>
-    &lt;/div>
+      <div className="space-y-3">{renderAlerts()}</div>
+    </div>
   );
 };
 

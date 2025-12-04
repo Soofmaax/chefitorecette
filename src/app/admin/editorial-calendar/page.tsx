@@ -124,7 +124,10 @@ const AdminEditorialCalendarPage = () => {
     }
   });
 
-  const items = rows ?? [];
+  const items = useMemo(
+    () => rows ?? [],
+    [rows]
+  );
 
   const uniqueCategories = useMemo(
     () =>

@@ -146,7 +146,7 @@ const AdminEditRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm&lt;RecipeFormValues>({
+  } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
@@ -186,7 +186,8 @@ const AdminEditRecipePage = () => {
     queryKey: ["admin-recipe", id],
     queryFn: () => fetchRecipeById(id as string),
     enabled: !!id
-  })</
+  });
+
   const { data: recipeConcepts } = useQuery({
     queryKey: ["recipe-concepts", id],
     queryFn: async () => {
@@ -412,17 +413,17 @@ const AdminEditRecipePage = () => {
       issues.push("Astuces Chefito ou détails de difficulté manquants.");
     }
 
-    if (ingredientsCount &lt; 3) {
+    if (ingredientsCount < 3) {
       issues.push(
         "Moins de 3 ingrédients normalisés dans recipe_ingredients_normalized."
       );
     }
-    if (stepsCount &lt; 3) {
+    if (stepsCount < 3) {
       issues.push(
         "Moins de 3 étapes enrichies dans recipe_steps_enhanced."
       );
     }
-    if ((recipeConcepts?.length ?? 0) &lt; 1) {
+    if ((recipeConcepts?.length ?? 0) < 1) {
       issues.push(
         "Aucun concept scientifique lié via recipe_concepts."
       );

@@ -9,12 +9,12 @@ const MAX_AUDIO_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 Mo
 
 /**
  * Uploads a recipe image to Supabase Storage and returns its public URL.
- * The file is stored under: recipes/&lt;slug>/&lt;slug>-&lt;timestamp>.&lt;ext>
+ * The file is stored under: recipes/&lt;slug>/&lt;slug&gt;-&lt;timestamp&gt;.&lt;ext&gt;
  */
 export const uploadRecipeImage = async (
   file: File,
   recipeTitle: string
-): Promise&lt;string> => {
+): Promise<string> => {
   if (!file.type.startsWith("image/")) {
     throw new Error("Le fichier sélectionné n'est pas une image valide.");
   }
@@ -49,12 +49,12 @@ export const uploadRecipeImage = async (
 
 /**
  * Uploads an audio file to Supabase Storage and returns its public URL.
- * The file is stored under: audio/&lt;audioKey>/&lt;audioKey>-&lt;timestamp>.&lt;ext>
+ * The file is stored under: audio/&lt;audioKey>/&lt;audioKey&gt;-&lt;timestamp&gt;.&lt;ext&gt;
  */
 export const uploadAudioFile = async (
   file: File,
   audioKey: string
-): Promise&lt;string> => {
+): Promise<string> => {
   if (!file.type.startsWith("audio/")) {
     throw new Error("Le fichier sélectionné n'est pas un fichier audio valide.");
   }

@@ -85,7 +85,7 @@ const parseCsv = (text: string): { headers: string[]; rows: ParsedRow[] } => {
   const headers = firstLine.split(delimiter).map((h) => h.trim());
   const rows: ParsedRow[] = [];
 
-  for (let i = 1; i &lt; lines.length; i += 1) {
+  for (let i = 1; i < lines.length; i += 1) {
     const raw = lines[i];
     if (!raw) continue;
     const parts = raw.split(delimiter);
@@ -181,7 +181,7 @@ const buildImportRows = (
     let priority = 1;
     if (priorityRaw) {
       const n = Number(priorityRaw);
-      if (Number.isNaN(n) || n &lt;= 0) {
+      if (Number.isNaN(n) || n <= 0) {
         errors.push("Priorité invalide");
       } else {
         priority = n;
@@ -217,7 +217,7 @@ const AdminEditorialImportPage = () => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
-  const [mapping, setMapping] = useState&lt;ColumnMapping | null>(null);
+  const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
 
   const importMutation = useMutation({
