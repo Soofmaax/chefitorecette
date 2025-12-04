@@ -42,6 +42,7 @@ interface RecipesQueryParams {
   categoryFilter: string;
   cuisineFilter: string;
   search: string;
+  slugOrId: string;
 }
 
 interface RecipesQueryResult {
@@ -123,7 +124,7 @@ const computeMissingFields = (recipe: AdminRecipe): string[] => {
 
 const fetchRecipes = async (
   params: RecipesQueryParams
-): Promise<RecipesQueryResult> => {
+): Promis<<RecipesQueryResult> => {
   const {
     page,
     perPage,
@@ -162,8 +163,14 @@ const fetchRecipes = async (
     query = query.eq("cuisine", cuisineFilter);
   }
 
-  if (search.trim()) {
-    const needle = `%${search.trim()}%`;
+  const trimmedSlugOrId = slugOrId.trim();
+  const trimmedSearch = search.trim();
+
+  if (trimmedSlugOrId) {
+    // Recherche exacte sur id ou slug pour accès rapide à une fiche précise.
+    query = query.or(`id.eq.${trimmedSlugOrId},slug.eq.${trimmedSlugOrId}`);
+  } else if (trimmedSearch) {
+    const needle = `%${trimmedSearch}%`;
     query = query.or(
       [
         `title.ilike.${needle}`,
@@ -189,7 +196,9 @@ const fetchRecipes = async (
 };
 
 const fetchCategories = async (): Promise<string[]> => {
-  const { data, error } = await supabase.from("recipes").select("category");
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("category", { distinct: true });
 
   if (error) {
     throw error;
@@ -200,11 +209,13 @@ const fetchCategories = async (): Promise<string[]> => {
     .map((r) => r.category)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return Array.from(new Set(values)).sort();
+  return values.sort();
 };
 
 const fetchCuisines = async (): Promise<string[]> => {
-  const { data, error } = await supabase.from("recipes").select("cuisine");
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("cuisine", { distinct: true });
 
   if (error) {
     throw error;
@@ -215,7 +226,7 @@ const fetchCuisines = async (): Promise<string[]> => {
     .map((r) => r.cuisine)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return Array.from(new Set(values)).sort();
+  return values.sort();
 };
 
 const AdminRecipesPage = () => {
@@ -224,13 +235,21 @@ const AdminRecipesPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [cuisineFilter, setCuisineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [slugOrId, setSlugOrId] = useState("");
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
 
-  // Reset page when filters changent
+  // Reset page when filtres ou recherche changent
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, difficultyFilter, categoryFilter, cuisineFilter, search]);
+  }, [
+    statusFilter,
+    difficultyFilter,
+    categoryFilter,
+    cuisineFilter,
+    search,
+    slugOrId
+  ]);
 
   const {
     data,
@@ -246,7 +265,8 @@ const AdminRecipesPage = () => {
         difficultyFilter,
         categoryFilter,
         cuisineFilter,
-        search
+        search,
+        slugOrId
       }
     ],
     queryFn: () =>
@@ -257,7 +277,8 @@ const AdminRecipesPage = () => {
         difficultyFilter,
         categoryFilter,
         cuisineFilter,
-        search
+        search,
+        slugOrId
       }),
     keepPreviousData: true
   });
@@ -309,13 +330,22 @@ const AdminRecipesPage = () => {
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <input
-            type="text"
-            placeholder="Recherche plein texte (titre, description, ingrédients)…"
-            className="w-full min-w-[260px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-80"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              type="text"
+              placeholder="Recherche plein texte (titre, description, ingrédients)…"
+              className="w-full min-w-[260px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-80"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="ID ou slug exact…"
+              className="w-full min-w-[220px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-64"
+              value={slugOrId}
+              onChange={(e) => setSlugOrId(e.target.value)}
+            />
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <select
