@@ -1,7 +1,6 @@
 # Backoffice Chefito – Admin premium recettes
 
 ![CI](https://github.com/[user]/chefitorecette/workflows/CI/badge.svg)
-![Security](https://github.com/[user]/chefitorecette/workflows/CodeQL/badge.svg)
 ![Status](https://img.shields.io/badge/status-private-informational)
 ![Framework](https://img.shields.io/badge/Next.js-15.5-black?logo=next.js)
 ![Runtime](https://img.shields.io/badge/Node-20.x-339933?logo=node.js)
