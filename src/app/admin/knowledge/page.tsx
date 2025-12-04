@@ -278,6 +278,7 @@ const AdminKnowledgePage = () => {
             }
           }}
         >
+          <div>
             <label htmlFor="concept_key" className="block text-[11px]">
               Clé de concept (unique)
             </label>

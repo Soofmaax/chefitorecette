@@ -421,7 +421,10 @@ const AdminRecipesPage = () => {
     placeholderData: keepPreviousData
   });
 
-  const ragCounts: Record<string, RagCounts> = ragCountsData ?? {};
+  const ragCounts = useMemo<Record<string, RagCounts>>(
+    () => ragCountsData ?? {},
+    [ragCountsData]
+  );
 
   const recipesWithRag = useMemo<RecipeWithRagInfo[]>(
     () =>
