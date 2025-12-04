@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  quality-check:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,15 +20,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install
 
-      - name: Lint
+      - name: Lint (ESLint)
         run: npm run lint
 
-      - name: Typecheck
+      - name: Format check (Prettier)
+        run: npm run format:check
+
+      - name: Typecheck (TypeScript)
         run: npm run typecheck
 
-      - name: Build
+      - name: Build (Next.js)
         run: npm run build
+
+      - name: Security audit (npm audit)
+        run: npm audit --audit-level=high
