@@ -115,6 +115,14 @@ Fonctionnalités :
   - `status` : `draft`, `scheduled`, `published`, ou “tous”
   - `difficulty` : `beginner`, `intermediate`, `advanced`, ou “toutes”
   - `category`, `cuisine` : listes des valeurs distinctes trouvées dans la base
+  - **Filtre RAG** (structure de données) :
+    - `RAG complet` : ingrédients normalisés, étapes enrichies, concepts liés et SEO (titre + meta description) présents.
+    - `RAG partiel` : certaines dimensions remplies, d’autres non.
+    - `RAG absent` : aucune de ces dimensions n’est renseignée.
+    - Filtres dimensionnels :
+      - `Sans ingrédients normalisés` (aucune entrée dans `recipe_ingredients_normalized`),
+      - `Sans étapes enrichies` (aucune entrée dans `recipe_steps_enhanced`),
+      - `Sans concepts scientifiques` (aucune entrée dans `recipe_concepts`).
 - **Recherche** :
   - Recherche plein texte :
     - Sur `title`, `slug`, `category`, `cuisine`, `ingredients_text`, `instructions_detailed`
@@ -128,6 +136,13 @@ Fonctionnalités :
   - Badge **✅ “enrichie”** si tous les critères premium (éditoriaux/SEO) sont remplis.
   - Badge **⚠️ “à enrichir”** sinon.
   - Badge rouge indiquant le nombre de champs manquants : `X champ(s) manquant(s)` (critères premium).
+- **Colonne RAG** :
+  - Badge **“RAG complet / partiel / absent”** calculé côté front à partir de :
+    - la présence d’ingrédients normalisés,
+    - d’étapes enrichies,
+    - de concepts scientifiques liés,
+    - et de champs SEO (`meta_title`, `meta_description`).
+  - Sert à piloter la complétude de la structure de données pour le futur RAG, indépendamment du statut premium.
 - **Embeddings** :
   - Colonne indiquant si l’embedding est présent (`Présent` / `Manquant`).
   - Bouton “Recalculer embedding” pour déclencher `generate-recipe-embedding` (usage optionnel).
@@ -171,18 +186,25 @@ Validation :
   - `source_info`
   - `difficulty_detailed`
   - `nutritional_notes`
+- Assistants de saisie :
+  - `difficulty_detailed` peut être prérempli automatiquement à partir de `difficulty` grâce à des templates texte (débutant/intermédiaire/avancé), modifiables à la main.
 
 ##### c) Image & SEO
 
 - Image :
   - `image_url`
   - Upload d’image vers Supabase Storage (bucket `recipe-images`) via `uploadRecipeImage` (`src/lib/storage.ts`):
-    - chemin : `recipes/<slug>/<slug>-<timestamp>.<ext>`
+    - chemin : `recipes/&lt;slug&gt;/&lt;slug&gt;-&lt;timestamp&gt;.&lt;ext&gt;`
 - SEO :
   - `meta_title`
   - `meta_description`
   - `canonical_url`
   - `og_image_url`
+- Assistants de saisie (sans IA) :
+  - `meta_title` prérempli automatiquement à partir du `title` (si vide).
+  - `meta_description` préremplie à partir de `description`, tronquée à ~160 caractères (si vide).
+  - `canonical_url` préremplie à partir du `slug` (pattern `/recettes/{slug}`) si vide.
+  - `og_image_url` préremplie à partir de `image_url` si vide.
 
 ##### d) Ingrédients structurés – `recipe_ingredients_normalized`
 
@@ -199,7 +221,8 @@ UI & fonctionnalités :
   - Ordre (`order_index`) avec drag & drop.
   - Ingrédient (via `IngredientSelector` → `ingredients_catalog`).
   - Quantité (`quantity` → `quantity_value`).
-  - Unité (`unit` → `quantity_unit`).
+  - Unité (`unit` → `quantity_unit`) :
+    - champ texte avec liste d’unités courantes (g, kg, ml, c.à.s, c.à.c, pincée, etc.) pour éviter les incohérences, tout en restant modifiable.
   - Texte original (`original_text`).
   - Préparation (`preparation_notes`).
   - Optionnel (`is_optional`).
@@ -255,6 +278,12 @@ Dans la page d’édition, un panneau récapitule :
 - **Audio** :
   - Nombre d’entrées `audio_usage_stats` pour cette recette.
   - Bouton vers `/admin/audio` pour gérer `audio_library` et `audio_mapping`.
+- **Checklist RAG (structure)** :
+  - Ingrédients normalisés présents ou non (`recipe_ingredients_normalized`).
+  - Étapes enrichies présentes ou non (`recipe_steps_enhanced`).
+  - Concepts scientifiques liés présents ou non (`recipe_concepts`).
+  - SEO complet ou non (titre + meta description).
+  - Permet de voir immédiatement si la recette est “RAG-ready” côté données, indépendamment du statut premium.
 
 ##### g) Actions globales sur la recette
 
@@ -353,18 +382,60 @@ Données :
 
 - Table : `knowledge_base`.
 
+Champs principaux :
+
+- Métadonnées :
+  - `concept_key` (clé unique interne, ex. `reaction_maillard`)
+  - `title` (ex. “Réaction de Maillard”)
+  - `category` (thermodynamique, chimie, texture…)
+  - `difficulty_level` (1–3)
+  - `work_status` (`not_started`, `researching`, `draft`, `ready`, `published`)
+  - `usage_priority` (priorité d’usage dans l’UI et le RAG)
+- Contenus de connaissance :
+  - `short_definition` : définition courte (résumé en 1–2 phrases)
+  - `long_explanation` : explication détaillée, exemples…
+  - `synonyms` : liste de synonymes (array texte)
+
 Fonctionnalités :
 
-- Liste des concepts :
-  - `concept_key`, `title`, `category`
-  - `difficulty_level`, `work_status`, `usage_priority`
+- Formulaire CRUD complet :
+  - Création d’un concept avec toutes les métadonnées et contenus de connaissance.
+  - Édition d’un concept existant (bouton “Éditer” dans la liste).
+  - Suppression d’un concept, avec confirmation.
+- Saisie assistée :
+  - Les synonymes sont saisis sous forme de texte séparé par des virgules, puis transformés en array pour `synonyms`.
 - Vision globale de l’état d’avancement :
   - Workflow `work_status` : `not_started`, `researching`, `draft`, `ready`, `published`.
-- Liens avec les recettes via `recipe_concepts` (compteur dans l’éditeur).
+- Liens avec les recettes via `recipe_concepts` (affichage dans l’éditeur de recette et dans le panneau RAG).
 
 ---
 
-### 3.6. Gestion audio
+### 3.6. Concepts scientifiques liés à une recette
+
+#### Éditeur de concepts par recette
+
+Composant : `src/components/admin/RecipeConceptsEditor.tsx`, intégré dans la page d’édition d’une recette.
+
+Données :
+
+- Tables :
+  - `knowledge_base` (concepts)
+  - `recipe_concepts` (liens recette ↔ concepts)
+
+Fonctionnalités :
+
+- Visualisation :
+  - Liste des concepts déjà liés à la recette sous forme de “chips” (titre + `concept_key`).
+  - Bouton ✕ pour retirer un concept (supprime l’entrée correspondante dans `recipe_concepts`).
+- Ajout de concepts :
+  - Champ de recherche plein texte (titre, `concept_key`, catégorie, statut).
+  - Suggestions limitées aux concepts non encore liés à la recette.
+  - Bouton “Ajouter” qui crée un lien dans `recipe_concepts` (`recipe_id` + `concept_key`).
+- Cette édition permet de remplir la table `recipe_concepts` de manière fluide et de renforcer le contexte scientifique pour chaque recette.
+
+---
+
+### 3.7. Gestion audio
 
 #### `/admin/audio`
 
@@ -431,11 +502,14 @@ En pratique, le backoffice te permet aujourd’hui :
 
 - De **lister et filtrer** les recettes à grande échelle (pagination serveur) et voir immédiatement lesquelles sont au niveau “premium”.
 - De **retrouver instantanément** une recette précise via un champ de recherche par **ID ou slug exact**.
+- De **piloter la structure RAG** des recettes grâce :
+  - à une colonne **RAG** (complet / partiel / absent),
+  - à des filtres dédiés (recettes sans ingrédients normalisés, sans étapes enrichies, sans concepts scientifiques).
 - D’**éditer en profondeur** une recette :
   - base éditoriale,
   - ingrédients texte + ingrédients normalisés,
   - étapes enrichies (Tiptap, durées, température, explications scientifiques),
-  - SEO,
+  - SEO (avec auto-remplissage basique du titre et de la meta description),
   - image,
   - statut et publication.
 - De **piloter la qualité premium** via une définition claire et visible dans l’UI, indépendante de l’IA.
@@ -444,7 +518,10 @@ En pratique, le backoffice te permet aujourd’hui :
   - rejet,
   - **fusion avancée** des doublons avec migration des données liées.
 - De **maintenir un catalogue d’ingrédients** centralisé.
-- De **gérer une base de connaissances scientifiques** (`knowledge_base`) et leurs liens à des recettes.
+- De **gérer une base de connaissances scientifiques** (`knowledge_base`) enrichie :
+  - métadonnées (statut, difficulté, priorité),
+  - contenu (définition courte, explication longue, synonymes),
+  - liens avec les recettes (`recipe_concepts`) éditables directement depuis l’éditeur de recette.
 - De **gérer une bibliothèque audio** :
   - upload de fichiers audio,
   - métadonnées,
@@ -453,7 +530,7 @@ En pratique, le backoffice te permet aujourd’hui :
 - D’**exploiter les embeddings** comme couche technique optionnelle (RAG/recherche) sans qu’ils bloquent le statut premium.
 
 Cette doc reflète l’état fonctionnel actuel du projet.  
-Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : CRUD complet sur `knowledge_base`, workflows de travail `work_progress`, analytics audio plus poussés, etc.).
+Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : analytics RAG plus poussés dans le dashboard, vues SQL pour les recettes à compléter, etc.).
 
 ---
 
@@ -518,7 +595,9 @@ Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : CRUD
 
 ---
 
-## 6.4. Index SQL pour scaler les recettes
+## 6.4. SQL pour scaler et enrichir les données
+
+### 6.4.1. Index pour les recettes
 
 Un fichier `sql/indexes_recipes.sql` propose une série d’indexes à appliquer dans Supabase pour garder une bonne performance quand le nombre de recettes augmente :
 
@@ -534,6 +613,22 @@ Utilisation :
 3. Exécuter les commandes (`create index if not exists …`).
 
 Une suggestion de mise en place d’un index full-text (`tsvector` + index GIN) est aussi fournie en commentaire pour aller plus loin sur la recherche sémantique.
+
+### 6.4.2. Enrichissement de la base de connaissances
+
+Un fichier `sql/knowledge_base_enrich.sql` ajoute des colonnes utiles au RAG dans la table `knowledge_base` :
+
+- `short_definition` (texte)
+- `long_explanation` (texte)
+- `synonyms` (tableau de textes)
+
+Utilisation :
+
+1. Ouvrir le **SQL editor** dans Supabase.
+2. Coller le contenu de `sql/knowledge_base_enrich.sql`.
+3. Exécuter les commandes (`alter table … add column if not exists …`).
+
+Ces colonnes sont utilisées par la page `/admin/knowledge` pour saisir des définitions courtes, des explications longues et des synonymes pour chaque concept scientifique.
 
 ---
 
