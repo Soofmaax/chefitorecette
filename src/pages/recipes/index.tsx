@@ -170,6 +170,12 @@ const RecipesListPage = () => {
             </button>
           </div>
 
+          <Link href="/recipes/completion" legacyBehavior>
+            <a>
+              <Button variant="secondary">Recettes à compléter</Button>
+            </a>
+          </Link>
+
           <Link href="/recipes/new" legacyBehavior>
             <a>
               <Button variant="primary">Nouvelle recette</Button>
