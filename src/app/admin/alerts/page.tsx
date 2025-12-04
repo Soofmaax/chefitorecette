@@ -288,9 +288,9 @@ const AdminAlertsPage = () => {
                 variant="secondary"
                 className="text-xs"
                 disabled={
-                  resolveAsParentChild.isLoading ||
-                  resolveAsDifferent.isLoading ||
-                  mergeRecipes.isLoading ||
+                  resolveAsParentChild.isPending ||
+                  resolveAsDifferent.isPending ||
+                  mergeRecipes.isPending ||
                   !newRecipe ||
                   !similarRecipe
                 }
@@ -311,9 +311,9 @@ const AdminAlertsPage = () => {
                 variant="secondary"
                 className="text-xs"
                 disabled={
-                  resolveAsParentChild.isLoading ||
-                  resolveAsDifferent.isLoading ||
-                  mergeRecipes.isLoading ||
+                  resolveAsParentChild.isPending ||
+                  resolveAsDifferent.isPending ||
+                  mergeRecipes.isPending ||
                   !newRecipe ||
                   !similarRecipe
                 }
@@ -334,9 +334,9 @@ const AdminAlertsPage = () => {
                 variant="secondary"
                 className="text-xs text-red-300 hover:text-red-200"
                 disabled={
-                  resolveAsParentChild.isLoading ||
-                  resolveAsDifferent.isLoading ||
-                  mergeRecipes.isLoading
+                  resolveAsParentChild.isPending ||
+                  resolveAsDifferent.isPending ||
+                  mergeRecipes.isPending
                 }
                 onClick={() => resolveAsDifferent.mutate(alert.id)}
               >
@@ -348,7 +348,7 @@ const AdminAlertsPage = () => {
                 variant="secondary"
                 className="text-xs"
                 disabled={
-                  mergeRecipes.isLoading ||
+                  mergeRecipes.isPending ||
                   !newRecipe ||
                   !similarRecipe
                 }
@@ -369,7 +369,7 @@ const AdminAlertsPage = () => {
                 variant="secondary"
                 className="text-xs"
                 disabled={
-                  mergeRecipes.isLoading ||
+                  mergeRecipes.isPending ||
                   !newRecipe ||
                   !similarRecipe
                 }

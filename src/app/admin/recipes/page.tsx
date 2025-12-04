@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { triggerEmbedding } from "@/lib/embeddings";
 import { Button } from "@/components/ui/Button";
@@ -60,6 +60,18 @@ interface RagCounts {
   ingredients: number;
   steps: number;
   concepts: number;
+}
+
+interface RagInfo {
+  status: RagStatus;
+  hasIngredients: boolean;
+  hasSteps: boolean;
+  hasConcepts: boolean;
+}
+
+interface RecipeWithRagInfo {
+  recipe: AdminRecipe;
+  ragInfo: RagInfo;
 }
 
 interface RecipesQueryResult {
@@ -214,9 +226,7 @@ const fetchRecipes = async (
 };
 
 const fetchCategories = async (): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("category", { distinct: true });
+  const { data, error } = await supabase.from("recipes").select("category");
 
   if (error) {
     throw error;
@@ -227,13 +237,11 @@ const fetchCategories = async (): Promise<string[]> => {
     .map((r) => r.category)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return values.sort();
+  return Array.from(new Set(values)).sort();
 };
 
 const fetchCuisines = async (): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("cuisine", { distinct: true });
+  const { data, error } = await supabase.from("recipes").select("cuisine");
 
   if (error) {
     throw error;
@@ -244,7 +252,7 @@ const fetchCuisines = async (): Promise<string[]> => {
     .map((r) => r.cuisine)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return values.sort();
+  return Array.from(new Set(values)).sort();
 };
 
 const fetchRagCounts = async (
@@ -306,7 +314,7 @@ const fetchRagCounts = async (
 const computeRagStatus = (
   recipe: AdminRecipe,
   counts: RagCounts | undefined
-): { status: RagStatus; hasIngredients: boolean; hasSteps: boolean; hasConcepts: boolean } => {
+): RagInfo => {
   const hasIngredients = (counts?.ingredients ?? 0) > 0;
   const hasSteps = (counts?.steps ?? 0) > 0;
   const hasConcepts = (counts?.concepts ?? 0) > 0;
@@ -357,7 +365,7 @@ const AdminRecipesPage = () => {
     data,
     isLoading,
     isError
-  } = useQuery<RecipesQueryResult>({
+  } = useQuery<RecipesQueryResult, Error>({
     queryKey: [
       "admin-recipes",
       {
@@ -382,37 +390,40 @@ const AdminRecipesPage = () => {
         search,
         slugOrId
       }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
 
-  const { data: categories = [] } = useQuery<string[]>({
+  const { data: categories = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-categories"],
     queryFn: fetchCategories
   });
 
-  const { data: cuisines = [] } = useQuery<string[]>({
+  const { data: cuisines = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-cuisines"],
     queryFn: fetchCuisines
   });
 
-  const recipes = useMemo(
-    () => (data?.items ?? []).filter((r) => !!r.id),
+  const recipes = useMemo<AdminRecipe[]>(
+    () => (data?.items ?? []).filter((r: AdminRecipe) => !!r.id),
     [data]
   );
   const total = data?.total ?? 0;
   const totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
-  const recipeIds = useMemo(() => recipes.map((r) => r.id), [recipes]);
+  const recipeIds = useMemo<string[]>(() => recipes.map((r) => r.id), [recipes]);
 
-  const { data: ragCounts = {}, isLoading: isLoadingRag } = useQuery<
-    Record<string, RagCounts>
-  >({
+  const {
+    data: ragCountsData,
+    isLoading: isLoadingRag
+  } = useQuery<Record<string, RagCounts>, Error>({
     queryKey: ["admin-recipes-rag", recipeIds],
     queryFn: () => fetchRagCounts(recipeIds),
     enabled: recipeIds.length > 0,
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
 
-  const recipesWithRag = useMemo(
+  const ragCounts: Record<string, RagCounts> = ragCountsData ?? {};
+
+  const recipesWithRag = useMemo<RecipeWithRagInfo[]>(
     () =>
       recipes.map((recipe) => {
         const counts = ragCounts[recipe.id];
@@ -422,8 +433,8 @@ const AdminRecipesPage = () => {
     [recipes, ragCounts]
   );
 
-  const filteredRecipes = useMemo(() => {
-    return recipesWithRag.filter(({ recipe, ragInfo }) => {
+  const filteredRecipes = useMemo<RecipeWithRagInfo[]>(() => {
+    return recipesWithRag.filter(({ ragInfo }) => {
       const { status, hasIngredients, hasSteps, hasConcepts } = ragInfo;
 
       if (ragFilter === "complete" && status !== "complete") return false;
@@ -737,9 +748,9 @@ const AdminRecipesPage = () => {
                             onClick={() =>
                               embeddingMutation.mutate(recipe.id)
                             }
-                            disabled={embeddingMutation.isLoading}
+                            disabled={embeddingMutation.isPending}
                           >
-                            {embeddingMutation.isLoading && (
+                            {embeddingMutation.isPending && (
                               <LoadingSpinner size="sm" />
                             )}
                             <span>Recalculer embedding</span>

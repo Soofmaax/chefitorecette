@@ -205,7 +205,7 @@ export const RecipeConceptsEditor: React.FC<RecipeConceptsEditorProps> = ({
                   type="button"
                   className="ml-1 text-[10px] text-red-300 hover:text-red-200"
                   onClick={() => removeMutation.mutate(link.id)}
-                  disabled={removeMutation.isLoading}
+                  disabled={removeMutation.isPending}
                 >
                   ✕
                 </button>
@@ -252,7 +252,7 @@ export const RecipeConceptsEditor: React.FC<RecipeConceptsEditorProps> = ({
                   type="button"
                   variant="secondary"
                   className="text-[11px]"
-                  disabled={addMutation.isLoading}
+                  disabled={addMutation.isPending}
                   onClick={() => addMutation.mutate(concept.concept_key)}
                 >
                   Ajouter

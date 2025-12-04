@@ -211,10 +211,10 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
             type="button"
             variant="primary"
             className="inline-flex items-center gap-2 text-xs"
-            disabled={saveMutation.isLoading}
+            disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isLoading && (
+            {saveMutation.isPending && (
               <LoadingSpinner size="sm" className="text-slate-100" />
             )}
             <span>Enregistrer les étapes</span>

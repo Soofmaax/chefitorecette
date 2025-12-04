@@ -45,7 +45,7 @@ export const StepEditor: React.FC<StepEditorProps> = ({
   useEffect(() => {
     if (!editor) return;
     if (value.instruction !== editor.getHTML()) {
-      editor.commands.setContent(value.instruction || "", false);
+      editor.commands.setContent(value.instruction || "");
     }
   }, [value.instruction, editor]);
 

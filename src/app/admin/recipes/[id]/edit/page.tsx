@@ -34,9 +34,7 @@ const fetchRecipeById = async (id: string) => {
 };
 
 const fetchRecipeCategories = async (): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("category", { distinct: true });
+  const { data, error } = await supabase.from("recipes").select("category");
 
   if (error) {
     throw error;
@@ -47,13 +45,11 @@ const fetchRecipeCategories = async (): Promise<string[]> => {
     .map((r) => r.category)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return values.sort();
+  return Array.from(new Set(values)).sort();
 };
 
 const fetchRecipeCuisines = async (): Promise<string[]> => {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("cuisine", { distinct: true });
+  const { data, error } = await supabase.from("recipes").select("cuisine");
 
   if (error) {
     throw error;
@@ -64,7 +60,7 @@ const fetchRecipeCuisines = async (): Promise<string[]> => {
     .map((r) => r.cuisine)
     .filter((c): c is string => !!c && c.trim() !== "");
 
-  return values.sort();
+  return Array.from(new Set(values)).sort();
 };
 
 const isNonEmpty = (value: string | null | undefined) =>

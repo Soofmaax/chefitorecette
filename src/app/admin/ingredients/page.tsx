@@ -223,10 +223,10 @@ const AdminIngredientsPage = () => {
                 type="button"
                 variant="primary"
                 onClick={handleSubmit}
-                disabled={upsertMutation.isLoading}
+                disabled={upsertMutation.isPending}
                 className="inline-flex items-center gap-2"
               >
-                {upsertMutation.isLoading && (
+                {upsertMutation.isPending && (
                   <LoadingSpinner size="sm" className="text-slate-100" />
                 )}
                 <span>Enregistrer</span>
@@ -332,7 +332,7 @@ const AdminIngredientsPage = () => {
                           type="button"
                           variant="secondary"
                           className="text-xs text-red-300 hover:text-red-200"
-                          disabled={deleteMutation.isLoading}
+                          disabled={deleteMutation.isPending}
                           onClick={() => {
                             // eslint-disable-next-line no-alert
                             const ok = window.confirm(

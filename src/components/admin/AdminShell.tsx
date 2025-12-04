@@ -17,7 +17,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({
   const pathname = usePathname();
   const router = useRouter();
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.appRole === "admin";
 
   if (loading) {
     return (

@@ -54,7 +54,7 @@ interface DbRow {
   ingredients_catalog?: {
     display_name: string;
     canonical_name: string;
-  } | null;
+  }[] | null;
 }
 
 const fetchNormalizedIngredients = async (
@@ -74,23 +74,24 @@ const fetchNormalizedIngredients = async (
 
   const rows = (data as DbRow[]) ?? [];
 
-  return rows.map((row, index) => ({
-    id: row.id,
-    ingredient_catalog_id: row.ingredient_catalog_id,
-    ingredient_label:
-      row.ingredients_catalog?.display_name ??
-      row.ingredients_catalog?.canonical_name ??
-      "",
-    quantity:
-      typeof row.quantity_value === "number"
-        ? String(row.quantity_value)
-        : "",
-    unit: row.quantity_unit ?? "",
-    original_text: row.original_text ?? "",
-    preparation_notes: row.preparation_notes ?? "",
-    is_optional: row.is_optional ?? false,
-    order_index: row.order_index ?? index + 1
-  }));
+  return rows.map((row, index) => {
+    const catalog = row.ingredients_catalog?.[0];
+    return {
+      id: row.id,
+      ingredient_catalog_id: row.ingredient_catalog_id,
+      ingredient_label:
+        catalog?.display_name ?? catalog?.canonical_name ?? "",
+      quantity:
+        typeof row.quantity_value === "number"
+          ? String(row.quantity_value)
+          : "",
+      unit: row.quantity_unit ?? "",
+      original_text: row.original_text ?? "",
+      preparation_notes: row.preparation_notes ?? "",
+      is_optional: row.is_optional ?? false,
+      order_index: row.order_index ?? index + 1
+    };
+  });
 };
 
 export const RecipeIngredientsEditor: React.FC<
@@ -261,10 +262,10 @@ export const RecipeIngredientsEditor: React.FC<
             type="button"
             variant="primary"
             className="inline-flex items-center gap-2 text-xs"
-            disabled={saveMutation.isLoading}
+            disabled={saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
-            {saveMutation.isLoading && (
+            {saveMutation.isPending && (
               <LoadingSpinner size="sm" className="text-slate-100" />
             )}
             <span>Enregistrer les ingrédients</span>

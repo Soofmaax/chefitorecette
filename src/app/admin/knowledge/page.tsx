@@ -256,13 +256,13 @@ const AdminKnowledgePage = () => {
               (catégorie, statut, difficulté, priorité).
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 md:flex-row md:items-center">
             <Button
               type="button"
               variant="secondary"
               className="text-[11px]"
               onClick={resetForm}
-              disabled={upsertMutation.isLoading}
+              disabled={upsertMutation.isPending}
             >
               Réinitialiser le formulaire
             </Button>
@@ -273,12 +273,11 @@ const AdminKnowledgePage = () => {
           className="mt-4 grid gap-3 md:grid-cols-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!upsertMutation.isLoading) {
+            if (!upsertMutation.isPending) {
               upsertMutation.mutate();
             }
           }}
         >
-          <div>
             <label htmlFor="concept_key" className="block text-[11px]">
               Clé de concept (unique)
             </label>
@@ -426,10 +425,10 @@ const AdminKnowledgePage = () => {
             <Button
               type="submit"
               variant="primary"
-              disabled={upsertMutation.isLoading}
+              disabled={upsertMutation.isPending}
               className="inline-flex items-center gap-2 text-[11px]"
             >
-              {upsertMutation.isLoading && (
+              {upsertMutation.isPending && (
                 <LoadingSpinner size="sm" className="text-slate-100" />
               )}
               <span>{editingId ? "Mettre à jour le concept" : "Créer"}</span>
@@ -440,7 +439,7 @@ const AdminKnowledgePage = () => {
                 type="button"
                 variant="secondary"
                 className="inline-flex items-center gap-2 text-[11px] text-red-300 hover:text-red-200"
-                disabled={deleteMutation.isLoading}
+                disabled={deleteMutation.isPending}
                 onClick={() => {
                   // eslint-disable-next-line no-alert
                   const ok = window.confirm(

@@ -265,10 +265,10 @@ const AdminAudioPage = () => {
             type="button"
             variant="primary"
             className="inline-flex items-center gap-2 text-xs"
-            disabled={uploadMutation.isLoading}
+            disabled={uploadMutation.isPending}
             onClick={() => uploadMutation.mutate()}
           >
-            {uploadMutation.isLoading && (
+            {uploadMutation.isPending && (
               <LoadingSpinner size="sm" className="text-slate-100" />
             )}
             <span>Uploader et créer l&apos;entrée audio</span>
@@ -414,10 +414,10 @@ const AdminAudioPage = () => {
             type="button"
             variant="primary"
             className="inline-flex items-center gap-2 text-xs"
-            disabled={mappingMutation.isLoading}
+            disabled={mappingMutation.isPending}
             onClick={() => mappingMutation.mutate()}
           >
-            {mappingMutation.isLoading && (
+            {mappingMutation.isPending && (
               <LoadingSpinner size="sm" className="text-slate-100" />
             )}
             <span>Créer le mapping</span>
