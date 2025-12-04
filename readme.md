@@ -1,10 +1,10 @@
 # Backoffice Chefito – Admin premium recettes
 
-![CI](https://github.com/[user]/chefitorecette/workflows/CI/badge.svg)
+![CI](https://github.com/Soofmaax/chefitorecette/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/status-private-informational)
 ![Framework](https://img.shields.io/badge/Next.js-15.5-black?logo=next.js)
 ![Runtime](https://img.shields.io/badge/Node-20.x-339933?logo=node.js)
-![Language](https://img.shields.io/badge/TypeScript-5.x-3178Cts.
+![Language](https://img.shields.io/badge/TypeScript-5.x-3178C?logo=typescript)
 
 Ce projet combine :
 
@@ -732,13 +732,13 @@ Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : anal
 ## 6.3. CI / qualité code
 
 - **GitHub Actions** :
-  - Workflow `CI` dans `.github/workflows/ci.yml`.
+  - Workflow unique `CI` dans `.github/workflows/ci.yml`.
   - Se déclenche sur `push` (branches principales) et `pull_request`.
-  - Étapes :
-    - `npm install`
-    - `npm run lint`
-    - `npm run typecheck`
-    - `npm run build`
+  - Jobs :
+    - `quality-check` : `npm run lint` + `npm run typecheck`.
+    - `build` : `npm run build`.
+    - `security-scan` : `npm audit --audit-level=high` + analyse CodeQL (JavaScript/TypeScript).
+    - `tests` : exécute `npm test` si un script `test` existe (sinon l’étape est ignorée avec un message).
 - **Scripts npm** utiles :
   - `npm run dev` : dev server Next.
   - `npm run lint` : ESLint (Next).
