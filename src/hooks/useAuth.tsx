@@ -64,14 +64,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const userWithRole = await fetchUserWithRole(session.user);
-        setUser(userWithRole);
-      } else {
-        setUser(null);
+    } = supabase.auth.onAuthStateChange(
+      async (_event: string, session: { user: User } | null) => {
+        if (session?.user) {
+          const userWithRole = await fetchUserWithRole(session.user);
+          setUser(userWithRole);
+        } else {
+          setUser(null);
+        }
       }
-    });
+    );
 
     return () => {
       subscription.unsubscribe();
