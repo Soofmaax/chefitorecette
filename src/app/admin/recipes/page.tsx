@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
@@ -43,6 +43,23 @@ interface RecipesQueryParams {
   cuisineFilter: string;
   search: string;
   slugOrId: string;
+}
+
+type RagStatus = "complete" | "partial" | "missing";
+
+type RagFilter =
+  | "all"
+  | "complete"
+  | "partial"
+  | "missing"
+  | "no_ingredients"
+  | "no_steps"
+  | "no_concepts";
+
+interface RagCounts {
+  ingredients: number;
+  steps: number;
+  concepts: number;
 }
 
 interface RecipesQueryResult {
@@ -124,6 +141,8 @@ const computeMissingFields = (recipe: AdminRecipe): string[] => {
 
 const fetchRecipes = async (
   params: RecipesQueryParams
+): Promise<RecipesQueryResult> => {ecipes = async (
+  params: RecipesQueryParams
 ): Promis<<RecipesQueryResult> => {
   const {
     page,
@@ -132,7 +151,8 @@ const fetchRecipes = async (
     difficultyFilter,
     categoryFilter,
     cuisineFilter,
-    search
+    search,
+    slugOrId
   } = params;
 
   const from = (page - 1) * perPage;
@@ -229,6 +249,88 @@ const fetchCuisines = async (): Promise<string[]> => {
   return values.sort();
 };
 
+const fetchRagCounts = async (
+  recipeIds: string[]
+): Promise<Record<string, RagCounts>> => {
+  if (recipeIds.length === 0) {
+    return {};
+  }
+
+  const baseMap: Record<string, RagCounts> = {};
+  recipeIds.forEach((id) => {
+    baseMap[id] = { ingredients: 0, steps: 0, concepts: 0 };
+  });
+
+  const [{ data: ingData, error: ingError }, { data: stepsData, error: stepsError }, { data: conceptsData, error: conceptsError }] =
+    await Promise.all([
+      supabase
+        .from("recipe_ingredients_normalized")
+        .select("recipe_id")
+        .in("recipe_id", recipeIds),
+      supabase
+        .from("recipe_steps_enhanced")
+        .select("recipe_id")
+        .in("recipe_id", recipeIds),
+      supabase
+        .from("recipe_concepts")
+        .select("recipe_id")
+        .in("recipe_id", recipeIds)
+    ]);
+
+  if (ingError || stepsError || conceptsError) {
+    throw ingError || stepsError || conceptsError;
+  }
+
+  (ingData as { recipe_id: string }[] | null)?.forEach((row) => {
+    if (!baseMap[row.recipe_id]) {
+      baseMap[row.recipe_id] = { ingredients: 0, steps: 0, concepts: 0 };
+    }
+    baseMap[row.recipe_id].ingredients += 1;
+  });
+
+  (stepsData as { recipe_id: string }[] | null)?.forEach((row) => {
+    if (!baseMap[row.recipe_id]) {
+      baseMap[row.recipe_id] = { ingredients: 0, steps: 0, concepts: 0 };
+    }
+    baseMap[row.recipe_id].steps += 1;
+  });
+
+  (conceptsData as { recipe_id: string }[] | null)?.forEach((row) => {
+    if (!baseMap[row.recipe_id]) {
+      baseMap[row.recipe_id] = { ingredients: 0, steps: 0, concepts: 0 };
+    }
+    baseMap[row.recipe_id].concepts += 1;
+  });
+
+  return baseMap;
+};
+
+const computeRagStatus = (
+  recipe: AdminRecipe,
+  counts: RagCounts | undefined
+): { status: RagStatus; hasIngredients: boolean; hasSteps: boolean; hasConcepts: boolean } => {
+  const hasIngredients = (counts?.ingredients ?? 0) > 0;
+  const hasSteps = (counts?.steps ?? 0) > 0;
+  const hasConcepts = (counts?.concepts ?? 0) > 0;
+  const seoComplete =
+    isNonEmpty(recipe.meta_title) && isNonEmpty(recipe.meta_description);
+
+  const dimensions = [hasIngredients, hasSteps, hasConcepts, seoComplete];
+  const filled = dimensions.filter(Boolean).length;
+  const totalDims = dimensions.length;
+
+  let status: RagStatus = "missing";
+  if (filled === 0) {
+    status = "missing";
+  } else if (filled === totalDims) {
+    status = "complete";
+  } else {
+    status = "partial";
+  }
+
+  return { status, hasIngredients, hasSteps, hasConcepts };
+};
+
 const AdminRecipesPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
@@ -236,6 +338,7 @@ const AdminRecipesPage = () => {
   const [cuisineFilter, setCuisineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [slugOrId, setSlugOrId] = useState("");
+  const [ragFilter, setRagFilter] = useState<RagFilter>("all");
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
 
@@ -293,15 +396,50 @@ const AdminRecipesPage = () => {
     queryFn: fetchCuisines
   });
 
+  const recipes = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
+  const recipeIds = useMemo(() => recipes.map((r) => r.id), [recipes]);
+
+  const { data: ragCounts = {}, isLoading: isLoadingRag } = useQuery<
+    Record<string, RagCounts>
+  >({
+    queryKey: ["admin-recipes-rag", recipeIds],
+    queryFn: () => fetchRagCounts(recipeIds),
+    enabled: recipeIds.length > 0,
+    keepPreviousData: true
+  });
+
+  const recipesWithRag = useMemo(
+    () =>
+      recipes.map((recipe) => {
+        const counts = ragCounts[recipe.id];
+        const ragInfo = computeRagStatus(recipe, counts);
+        return { recipe, ragInfo };
+      }),
+    [recipes, ragCounts]
+  );
+
+  const filteredRecipes = useMemo(() => {
+    return recipesWithRag.filter(({ recipe, ragInfo }) => {
+      const { status, hasIngredients, hasSteps, hasConcepts } = ragInfo;
+
+      if (ragFilter === "complete" && status !== "complete") return false;
+      if (ragFilter === "partial" && status !== "partial") return false;
+      if (ragFilter === "missing" && status !== "missing") return false;
+      if (ragFilter === "no_ingredients" && hasIngredients) return false;
+      if (ragFilter === "no_steps" && hasSteps) return false;
+      if (ragFilter === "no_concepts" && hasConcepts) return false;
+
+      return true;
+    });
+  }, [recipesWithRag, ragFilter]);
+
   const embeddingMutation = useMutation({
     mutationFn: async (id: string) => {
       await triggerEmbedding("recipe", id);
     }
   });
-
-  const recipes = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
 
   if (isError) {
     return (
@@ -395,6 +533,22 @@ const AdminRecipesPage = () => {
                 </option>
               ))}
             </select>
+
+            <select
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={ragFilter}
+              onChange={(e) => setRagFilter(e.target.value as RagFilter)}
+            >
+              <option value="all">Toutes structures RAG</option>
+              <option value="complete">RAG complet</option>
+              <option value="partial">RAG partiel</option>
+              <option value="missing">RAG absent</option>
+              <option value="no_ingredients">
+                Sans ingrédients normalisés
+              </option>
+              <option value="no_steps">Sans étapes enrichies</option>
+              <option value="no_concepts">Sans concepts scientifiques</option>
+            </select>
           </div>
         </div>
       </div>
@@ -404,7 +558,12 @@ const AdminRecipesPage = () => {
           <div>
             {isLoading
               ? "Chargement des recettes…"
-              : `${recipes.length} recette(s) sur cette page (sur ${total} au total)`}
+              : `${filteredRecipes.length} recette(s) affichée(s) sur cette page (sur ${total} au total)`}
+            {isLoadingRag && !isLoading && (
+              <span className="ml-2 text-[11px] text-slate-500">
+                (calcul RAG…)
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -440,6 +599,7 @@ const AdminRecipesPage = () => {
                 <th className="px-4 py-2 text-left">Cuisine</th>
                 <th className="px-4 py-2 text-left">Catégorie</th>
                 <th className="px-4 py-2 text-left">Qualité</th>
+                <th className="px-4 py-2 text-left">RAG</th>
                 <th className="px-4 py-2 text-left">Embedding</th>
                 <th className="px-4 py-2 text-right">Actions</th>
               </tr>
@@ -448,26 +608,32 @@ const AdminRecipesPage = () => {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-6 text-center text-slate-400"
                   >
                     <LoadingSpinner className="mr-2 inline-block" />
                     Chargement…
                   </td>
                 </tr>
-              ) : recipes.length === 0 ? (
+              ) : filteredRecipes.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-6 text-center text-slate-500"
                   >
                     Aucune recette trouvée pour ces filtres.
                   </td>
                 </tr>
               ) : (
-                recipes.map((recipe) => {
+                filteredRecipes.map(({ recipe, ragInfo }) => {
                   const missing = computeMissingFields(recipe);
                   const enriched = isEnrichedPremium(recipe);
+                  const ragLabel =
+                    ragInfo.status === "complete"
+                      ? "RAG complet"
+                      : ragInfo.status === "partial"
+                      ? "RAG partiel"
+                      : "RAG absent";
 
                   return (
                     <tr key={recipe.id}>
@@ -526,6 +692,19 @@ const AdminRecipesPage = () => {
                             🔊 audio : à définir
                           </span>
                         </div>
+                      </td>
+                      <td className="px-4 py-2 align-top text-xs text-slate-200">
+                        <span
+                          className={`rounded px-2 py-0.5 text-[11px] ${
+                            ragInfo.status === "complete"
+                              ? "bg-emerald-500/10 text-emerald-300"
+                              : ragInfo.status === "partial"
+                              ? "bg-amber-500/10 text-amber-200"
+                              : "bg-slate-700/40 text-slate-300"
+                          }`}
+                        >
+                          {ragLabel}
+                        </span>
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-400">
                         {recipe.embedding ? (

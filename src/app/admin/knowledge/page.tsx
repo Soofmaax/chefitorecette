@@ -18,13 +18,16 @@ interface KnowledgeConcept {
   work_status: string | null;
   difficulty_level: number | null;
   usage_priority: number | null;
+  short_definition: string | null;
+  long_explanation: string | null;
+  synonyms: string[] | null;
 }
 
 const fetchKnowledge = async (): Promise<KnowledgeConcept[]> => {
   const { data, error } = await supabase
     .from("knowledge_base")
     .select(
-      "id, concept_key, title, category, work_status, difficulty_level, usage_priority"
+      "id, concept_key, title, category, work_status, difficulty_level, usage_priority, short_definition, long_explanation, synonyms"
     )
     .order("usage_priority", { ascending: false })
     .order("title", { ascending: true });
@@ -73,6 +76,9 @@ const AdminKnowledgePage = () => {
   const [workStatus, setWorkStatus] = useState<string>("not_started");
   const [difficultyLevel, setDifficultyLevel] = useState<number | null>(1);
   const [usagePriority, setUsagePriority] = useState<number | null>(0);
+  const [shortDefinition, setShortDefinition] = useState("");
+  const [longExplanation, setLongExplanation] = useState("");
+  const [synonymsText, setSynonymsText] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
@@ -84,6 +90,9 @@ const AdminKnowledgePage = () => {
     setWorkStatus("not_started");
     setDifficultyLevel(1);
     setUsagePriority(0);
+    setShortDefinition("");
+    setLongExplanation("");
+    setSynonymsText("");
     setErrorMessage(null);
     setInfoMessage(null);
   };
@@ -104,6 +113,13 @@ const AdminKnowledgePage = () => {
         ? concept.usage_priority
         : 0
     );
+    setShortDefinition(concept.short_definition ?? "");
+    setLongExplanation(concept.long_explanation ?? "");
+    setSynonymsText(
+      Array.isArray(concept.synonyms) && concept.synonyms.length > 0
+        ? concept.synonyms.join(", ")
+        : ""
+    );
     setErrorMessage(null);
     setInfoMessage(null);
   };
@@ -119,6 +135,11 @@ const AdminKnowledgePage = () => {
         );
       }
 
+      const synonymsArray = synonymsText
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
       const payload: Record<string, unknown> = {
         concept_key: conceptKey.trim(),
         title: title.trim(),
@@ -127,7 +148,10 @@ const AdminKnowledgePage = () => {
         difficulty_level:
           typeof difficultyLevel === "number" ? difficultyLevel : null,
         usage_priority:
-          typeof usagePriority === "number" ? usagePriority : null
+          typeof usagePriority === "number" ? usagePriority : null,
+        short_definition: shortDefinition.trim() || null,
+        long_explanation: longExplanation.trim() || null,
+        synonyms: synonymsArray.length > 0 ? synonymsArray : null
       };
 
       if (editingId) {
@@ -354,6 +378,48 @@ const AdminKnowledgePage = () => {
               Plus la valeur est élevée, plus le concept est prioritaire dans
               l&apos;UI et le RAG.
             </p>
+          </div>
+
+          <div className="md:col-span-4">
+            <label htmlFor="short_definition" className="block text-[11px]">
+              Définition courte
+            </label>
+            <textarea
+              id="short_definition"
+              rows={2}
+              className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              placeholder="Résumé en une ou deux phrases du concept…"
+              value={shortDefinition}
+              onChange={(e) => setShortDefinition(e.target.value)}
+            />
+          </div>
+
+          <div className="md:col-span-4">
+            <label htmlFor="long_explanation" className="block text-[11px]">
+              Explication longue
+            </label>
+            <textarea
+              id="long_explanation"
+              rows={4}
+              className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              placeholder="Explication détaillée du concept, exemples, variations…"
+              value={longExplanation}
+              onChange={(e) => setLongExplanation(e.target.value)}
+            />
+          </div>
+
+          <div className="md:col-span-4">
+            <label htmlFor="synonyms" className="block text-[11px]">
+              Synonymes (séparés par des virgules)
+            </label>
+            <textarea
+              id="synonyms"
+              rows={2}
+              className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              placeholder="ex: brunissage, réaction brunissante…"
+              value={synonymsText}
+              onChange={(e) => setSynonymsText(e.target.value)}
+            />
           </div>
 
           <div className="mt-4 flex items-center gap-2 md:col-span-4">
