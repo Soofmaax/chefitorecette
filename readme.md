@@ -1,6 +1,9 @@
 # Backoffice Chefito – Admin premium recettes
 
-Interface d’administration pour enrichir manuellement les recettes existantes avec une **qualité premium** : contenus éditoriaux avancés, concepts scientifiques, SEO, audio, embeddings RAG, gestion des doublons et des ingrédients.
+![Status](https://img.shields.io/badge/status-private-informational)
+![Framework](https://img.shields.io/badge/Next.js-15.5-black?logo=next.js)
+![Runtime](https://img.shields.io/badge/Node-20.x-339933?logo=node.js)
+![Language](https://img.shields.io/badge/TypeScript-5.x-3178Cts.
 
 Ce projet combine :
 
@@ -17,7 +20,18 @@ Ce projet combine :
   - [3.1. Dashboard admin](#31-dashboard-admin)
   - [3.2. Gestion des recettes – Mode premium](#32-gestion-des-recettes--mode-premium)
   - [3.3. Alertes de similarité & gestion des doublons](#33-alertes-de-similarité--gestion-des-doublons)
-  - [3.4. Bibliothèque d’ingrédients](#34-bibliothèque-dingrédients---
+  - [3.4. Bibliothèque d’ingrédients](#34-bibliothèque-dingrédients)
+  - [3.5. Knowledge base (concepts scientifiques)](#35-knowledge-base-concepts-scientifiques)
+  - [3.6. Concepts scientifiques liés à une recette](#36-concepts-scientifiques-liés-à-une-recette)
+  - [3.7. Gestion audio](#37-gestion-audio)
+- [4. Partie historique : back-office HTML minimal](#4-partie-historique--back-office-html-minimal)
+- [5. Résumé opérationnel](#5-résumé-opérationnel)
+- [6. Architecture – vue d’ensemble](#6-architecture--vue-densemble)
+- [7. Guide de prise en main en 5 minutes (par rôle)](#7-guide-de-prise-en-main-en-5-minutes-par-rôle)
+- [8. Installation & exécution locale](#8-installation--exécution-locale)
+- [9. Configuration Supabase & environnement](#9-configuration-supabase--environnement)
+
+---
 
 ## 1. Stack & architecture
 
@@ -766,4 +780,94 @@ Avec ces sections supplémentaires (architecture + guides par rôle), tu as une 
 - **Qui fait quoi** (rédacteur, admin, data).
 - **Où cliquer** dans le backoffice pour chaque type de tâche.
 
-Si tu veux, on peut ensuite ajouter une mini “checklist de mise en prod” (variables d’environnement, buckets storage, politiques RLS) pour fermer la boucle.
+---
+
+## 8. Installation & exécution locale
+
+### 8.1. Prérequis
+
+- Node.js 20.x recommandé.
+- npm (ou pnpm/yarn si tu adaptes les commandes).
+- Un projet Supabase configuré avec :
+  - les tables décrites dans cette doc (`recipes`, `recipe_ingredients_normalized`, `recipe_steps_enhanced`, `knowledge_base`, `ingredients_catalog`, etc.),
+  - les buckets Storage nécessaires (`recipe-images`, `audio-files`).
+
+### 8.2. Installation des dépendances
+
+```bash
+npm install
+```
+
+### 8.3. Lancer l’environnement de développement
+
+```bash
+npm run dev
+```
+
+L’application est exposée par défaut sur `http://localhost:3000`.
+
+### 8.4. Scripts disponibles
+
+- `npm run dev` : lance le serveur Next.js en mode développement.
+- `npm run build` : build de production (vérifie aussi les erreurs runtime au build).
+- `npm run start` : démarre le serveur Next.js en mode production (après un `npm run build`).
+- `npm run lint` : lance ESLint (config Next).
+- `npm run typecheck` : lance TypeScript en mode `--noEmit` pour vérifier les types.
+
+---
+
+## 9. Configuration Supabase & environnement
+
+### 9.1. Variables d’environnement
+
+Créer un fichier `.env.local` à la racine du projet avec au minimum :
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+# Clé service role pour les opérations serveur (routes /api) uniquement
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` :
+  - utilisés par le client Supabase côté navigateur (`supabaseClient`) pour toutes les opérations soumises aux politiques RLS.
+- `SUPABASE_SERVICE_ROLE_KEY` :
+  - utilisé uniquement côté serveur, dans certaines routes API (par ex. `/api/recipes/merge`) via `supabaseAdmin`,
+  - ne doit jamais être exposé au client.
+
+### 9.2. Buckets Supabase Storage
+
+Deux buckets sont utilisés par défaut :
+
+1. `recipe-images`
+   - Stocke les images de recettes.
+   - Chemin typique : `recipes/<slug>/<slug>-<timestamp>.<ext>`.
+   - Access policy : public ou signée selon tes besoins front.
+
+2. `audio-files`
+   - Stocke les fichiers audio (`audio/*`).
+   - Chemin typique : `audio/<audioKey>/<audioKey>-<timestamp>.<ext>`.
+   - Utilisé par la page `/admin/audio` pour alimenter `audio_library`.
+
+Les règles de sécurité (policies) doivent être configurées dans Supabase pour autoriser les opérations nécessaires depuis le backoffice, tout en restant restreintes.
+
+### 9.3. SQL auxiliaire
+
+Deux fichiers SQL accompagnent le projet pour optimiser et enrichir la base :
+
+- `sql/indexes_recipes.sql` :
+  - crée des index sur les colonnes très filtrées (`status`, `difficulty`, `category`, `cuisine`) et sur les accès directs (`slug`, `created_at`),
+  - améliore les performances de la liste `/admin/recipes` sur de gros volumes.
+
+- `sql/knowledge_base_enrich.sql` :
+  - ajoute les colonnes `short_definition`, `long_explanation`, `synonyms` à `knowledge_base`,
+  - nécessaires pour la saisie enrichie de la knowledge base dans `/admin/knowledge`.
+
+Utilisation :
+
+1. Ouvrir le SQL editor de Supabase.
+2. Coller le contenu du fichier SQL voulu.
+3. Exécuter.
+
+Après cette configuration, le backoffice est prêt à être utilisé comme **outil interne de gestion de contenu premium et de structuration RAG**.
