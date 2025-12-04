@@ -20,7 +20,7 @@ const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url"
+      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding"
     )
     .eq("id", id)
     .single();
@@ -30,6 +30,66 @@ const fetchRecipeById = async (id: string) => {
   }
 
   return data;
+};
+
+const isNonEmpty = (value: string | null | undefined) =>
+  typeof value === "string" && value.trim() !== "";
+
+const getPremiumMissing = (recipe: any): string[] => {
+  const missing: string[] = [];
+
+  if (recipe.status !== "published") {
+    missing.push("Statut publié");
+  }
+
+  if (!isNonEmpty(recipe.image_url)) {
+    missing.push("Image");
+  }
+
+  if (!isNonEmpty(recipe.description)) {
+    missing.push("Description");
+  }
+
+  if (!isNonEmpty(recipe.ingredients_text)) {
+    missing.push("Ingrédients");
+  }
+
+  if (!isNonEmpty(recipe.instructions_detailed)) {
+    missing.push("Instructions détaillées");
+  }
+
+  if (!isNonEmpty(recipe.cultural_history)) {
+    missing.push("Histoire / contexte culturel");
+  }
+
+  if (!isNonEmpty(recipe.techniques)) {
+    missing.push("Techniques");
+  }
+
+  if (!isNonEmpty(recipe.nutritional_notes)) {
+    missing.push("Notes nutritionnelles");
+  }
+
+  if (!isNonEmpty(recipe.meta_title)) {
+    missing.push("Titre SEO");
+  }
+
+  if (!isNonEmpty(recipe.meta_description)) {
+    missing.push("Description SEO");
+  }
+
+  if (
+    !isNonEmpty(recipe.chef_tips) &&
+    !isNonEmpty(recipe.difficulty_detailed)
+  ) {
+    missing.push("Astuces ou détails difficulté");
+  }
+
+  if (!recipe.embedding) {
+    missing.push("Embedding RAG");
+  }
+
+  return missing;
 };
 
 const AdminEditRecipePage = () => {
@@ -85,6 +145,40 @@ const AdminEditRecipePage = () => {
   } = useQuery({
     queryKey: ["admin-recipe", id],
     queryFn: () => fetchRecipeById(id as string),
+    enabled: !!id
+  });
+
+  const { data: recipeConcepts } = useQuery({
+    queryKey: ["recipe-concepts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recipe_concepts")
+        .select("id, concept_key")
+        .eq("recipe_id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as { id: string; concept_key: string }[]) ?? [];
+    },
+    enabled: !!id
+  });
+
+  const { data: recipeAudioUsage } = useQuery({
+    queryKey: ["recipe-audio-usage", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audio_usage_stats")
+        .select("id")
+        .eq("recipe_id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as { id: string }[]) ?? [];
+    },
     enabled: !!id
   });
 
@@ -284,14 +378,11 @@ const AdminEditRecipePage = () => {
     }
   };
 
-  const isPremium = useMemo(() => {
-    if (!recipe) return false;
-    return (
-      !!recipe.nutritional_notes &&
-      !!recipe.cultural_history &&
-      !!recipe.techniques
-    );
-  }, [recipe]);
+  const premiumMissing = useMemo(
+    () => (recipe ? getPremiumMissing(recipe) : []),
+    [recipe]
+  );
+  const isPremium = premiumMissing.length === 0;
 
   if (isLoading) {
     return (
@@ -312,6 +403,10 @@ const AdminEditRecipePage = () => {
     );
   }
 
+  const conceptsCount = recipeConcepts?.length ?? 0;
+  const audioUsageCount = recipeAudioUsage?.length ?? 0;
+  const embeddingPresent = !!recipe.embedding;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -322,18 +417,6 @@ const AdminEditRecipePage = () => {
           <p className="mt-1 text-sm text-slate-400">
             Organisez les informations de base, les ingrédients, les étapes
             enrichies et le SEO de cette recette.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Qualité actuelle :{" "}
-            {isPremium ? (
-              <span className="font-semibold text-emerald-300">
-                premium (heuristique)
-              </span>
-            ) : (
-              <span className="font-semibold text-amber-300">
-                à enrichir
-              </span>
-            )}
           </p>
         </div>
 
@@ -350,20 +433,104 @@ const AdminEditRecipePage = () => {
             type="button"
             variant="secondary"
             className="text-xs"
-            onClick={handleRecomputeEmbedding}
-          >
-            Générer embedding
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="text-xs"
             onClick={() => router.push("/admin/recipes")}
           >
             Retour à la liste
           </Button>
         </div>
       </div>
+
+      {/* Panneau d'actions rapides & statut premium */}
+      <section className="card space-y-4 px-5 py-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+              Statut premium
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Qualité actuelle:{" "}
+              {isPremium ? (
+                <span className="font-semibold text-emerald-300">
+                  recette premium
+                </span>
+              ) : (
+                <span className="font-semibold text-amber-300">
+                  à enrichir pour être premium
+                </span>
+              )}
+            </p>
+            {premiumMissing.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {premiumMissing.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-3 text-xs md:grid-cols-3">
+            <div>
+              <p className="font-semibold text-slate-200">
+                Embedding RAG & search
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {embeddingPresent
+                  ? "Embedding présent pour cette recette."
+                  : "Embedding manquant ou obsolète."}
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-2 inline-flex items-center gap-2 text-[11px]"
+                onClick={handleRecomputeEmbedding}
+              >
+                Générer / recalculer l&apos;embedding
+              </Button>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-200">Concepts science</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {conceptsCount} concept(s) lié(s) via{" "}
+                <code className="rounded bg-slate-800/80 px-1">
+                  recipe_concepts
+                </code>
+                .
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-2 inline-flex items-center gap-2 text-[11px]"
+                onClick={() => router.push("/admin/knowledge")}
+              >
+                Gérer la base de connaissances
+              </Button>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-200">Audio</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {audioUsageCount > 0
+                  ? `${audioUsageCount} utilisation(s) audio tracée(s) pour cette recette.`
+                  : "Aucun usage audio enregistré pour cette recette."}
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-2 inline-flex items-center gap-2 text-[11px]"
+                onClick={() => router.push("/admin/audio")}
+              >
+                Gérer la bibliothèque audio
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <form
         onSubmit={handleSubmit(onSubmit)}

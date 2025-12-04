@@ -12,7 +12,9 @@ interface AdminRecipe {
   id: string;
   title: string;
   slug: string;
-  status: string;
+  status: string | null;
+  description: string | null;
+  image_url: string | null;
   category: string | null;
   cuisine: string | null;
   difficulty: string | null;
@@ -25,6 +27,8 @@ interface AdminRecipe {
   techniques: string | null;
   difficulty_detailed: string | null;
   nutritional_notes: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   embedding: unknown | null;
 }
 
@@ -34,7 +38,7 @@ const fetchRecipes = async (): Promise<AdminRecipe[]> => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, title, slug, status, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, embedding"
+      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding"
     )
     .order("created_at", { ascending: false })
     .limit(300);
@@ -46,47 +50,72 @@ const fetchRecipes = async (): Promise<AdminRecipe[]> => {
   return (data as AdminRecipe[]) ?? [];
 };
 
-const computeMissingFields = (recipe: AdminRecipe): string[] => {
-  const missing: string[] = [];
-  const check = (
-    key: keyof AdminRecipe,
-    label: string,
-    required: boolean = true
-  ) => {
-    const value = recipe[key];
-    if (!required) return;
-    if (value === null || value === undefined) {
-      missing.push(label);
-      return;
-    }
-    if (typeof value === "string" && value.trim() === "") {
-      missing.push(label);
-    }
-  };
+const isNonEmpty = (value: string | null | undefined) =>
+  typeof value === "string" && value.trim() !== "";
 
-  check("description_detailed" as any, "Description", false); // placeholder
-  check("image_url" as any, "Image", false); // placeholder
-  check("ingredients_text", "Ingrédients");
-  check("instructions_detailed", "Instructions");
-  check("chef_tips", "Astuces du chef");
-  check("cultural_history", "Histoire / culture");
-  check("techniques", "Techniques");
-  check("difficulty_detailed", "Détails difficulté");
-  check("nutritional_notes", "Notes nutritionnelles");
+const getPremiumMissing = (recipe: AdminRecipe): string[] => {
+  const missing: string[] = [];
+
+  if (recipe.status !== "published") {
+    missing.push("Statut publié");
+  }
+
+  if (!isNonEmpty(recipe.image_url)) {
+    missing.push("Image");
+  }
+
+  if (!isNonEmpty(recipe.description)) {
+    missing.push("Description");
+  }
+
+  if (!isNonEmpty(recipe.ingredients_text)) {
+    missing.push("Ingrédients");
+  }
+
+  if (!isNonEmpty(recipe.instructions_detailed)) {
+    missing.push("Instructions détaillées");
+  }
+
+  if (!isNonEmpty(recipe.cultural_history)) {
+    missing.push("Histoire / contexte culturel");
+  }
+
+  if (!isNonEmpty(recipe.techniques)) {
+    missing.push("Techniques");
+  }
+
+  if (!isNonEmpty(recipe.nutritional_notes)) {
+    missing.push("Notes nutritionnelles");
+  }
+
+  if (!isNonEmpty(recipe.meta_title)) {
+    missing.push("Titre SEO");
+  }
+
+  if (!isNonEmpty(recipe.meta_description)) {
+    missing.push("Description SEO");
+  }
+
+  if (
+    !isNonEmpty(recipe.chef_tips) &&
+    !isNonEmpty(recipe.difficulty_detailed)
+  ) {
+    missing.push("Astuces ou détails difficulté");
+  }
+
+  if (!recipe.embedding) {
+    missing.push("Embedding RAG");
+  }
 
   return missing;
 };
 
 const isEnrichedPremium = (recipe: AdminRecipe): boolean => {
-  // Heuristique simple : notes nutritionnelles + histoire + techniques
-  return (
-    !!recipe.nutritional_notes &&
-    recipe.nutritional_notes.trim() !== "" &&
-    !!recipe.cultural_history &&
-    recipe.cultural_history.trim() !== "" &&
-    !!recipe.techniques &&
-    recipe.techniques.trim() !== ""
-  );
+  return getPremiumMissing(recipe).length === 0;
+};
+
+const computeMissingFields = (recipe: AdminRecipe): string[] => {
+  return getPremiumMissing(recipe);
 };
 
 const AdminRecipesPage = () => {
