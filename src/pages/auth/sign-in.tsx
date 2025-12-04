@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -101,6 +102,15 @@ const SignInPage = () => {
             )}
           </Button>
         </form>
+
+        <div className="mt-4 flex flex-col items-center gap-2 text-xs text-slate-500">
+          <Link
+            href="/auth/reset-password-request"
+            className="text-xs text-primary-300 hover:text-primary-200"
+          >
+            Mot de passe oublié ? Réinitialiser
+          </Link>
+        </div>
 
         <p className="mt-6 text-xs text-slate-500">
           L’authentification s’appuie sur Supabase Auth. Vérifiez que vos
