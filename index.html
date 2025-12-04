@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Back-office Supabase minimal</title>
+
+    <style>
+      :root {
+        --bg: #f5f5f7;
+        --bg-card: #ffffff;
+        --border-subtle: #e0e0e6;
+        --accent: #2563eb;
+        --accent-soft: #e0edff;
+        --text-main: #111827;
+        --text-muted: #6b7280;
+        --error: #b91c1c;
+        --success: #166534;
+        --radius: 10px;
+        --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: radial-gradient(circle at top left, #e0edff 0, #f5f5f7 55%);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .page {
+        width: 100%;
+        max-width: 1120px;
+        padding: 24px 16px 32px;
+      }
+
+      header {
+        margin-bottom: 24px;
+      }
+
+      header h1 {
+        margin: 0 0 6px;
+        font-size: 1.7rem;
+        letter-spacing: -0.03em;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+        gap: 20px;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--bg-card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 18px 20px 20px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+
+      .card h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+
+      .card p.subtitle {
+        margin: 0 0 14px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
+      label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+      }
+
+      select,
+      input[type="text"],
+      input[type="number"],
+      input[type="datetime-local"],
+      textarea {
+        width: 100%;
+        padding: 8px 9px;
+        border-radius: 6px;
+        border: 1px solid var(--border-subtle);
+        font: inherit;
+        resize: vertical;
+        min-height: 34px;
+        color: var(--text-main);
+      }
+
+      select:focus,
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent-soft);
+      }
+
+      textarea {
+        min-height: 70px;
+      }
+
+      .inline-select {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .form-row {
+        margin-bottom: 12px;
+      }
+
+      .form-row small {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .fields-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+      }
+
+      @media (max-width: 700px) {
+        .fields-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .fields-grid textarea {
+        min-height: 90px;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+      }
+
+      button.secondary {
+        background: #f9fafb;
+        color: #111827;
+        border: 1px solid var(--border-subtle);
+      }
+
+      button:disabled {
+        opacity: 0.7;
+        cursor: default;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .message {
+        margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 0.83rem;
+        white-space: pre-wrap;
+        background: #f9fafb;
+        border: 1px solid var(--border-subtle);
+        color: var(--text-muted);
+      }
+
+      .message.success {
+        border-color: rgba(22, 101, 52, 0.2);
+        background: #ecfdf3;
+        color: var(--success);
+      }
+
+      .message.error {
+        border-color: rgba(185, 28, 28, 0.2);
+        background: #fef2f2;
+        color: var(--error);
+      }
+
+      .rpc-result {
+        max-height: 240px;
+        overflow: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 0.8rem;
+      }
+
+      footer {
+        margin-top: 22px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+
+      footer code {
+        background: rgba(15, 23, 42, 0.03);
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #1d4ed8;
+        font-size: 0.72rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <header>
+        <h1>Back-office Supabase minimal</h1>
+        <p>
+          Interface légère pour insérer des données dans vos tables et appeler des
+          fonctions RPC Supabase.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="card">
+          <h2>Insertion dans les tables</h2>
+          <p class="subtitle">
+            Choisissez une table, renseignez les champs puis envoyez une nouvelle
+            ligne dans Supabase.
+          </p>
+
+          <div class="form-row">
+            <label for="table-select">Table cible</label>
+            <select id="table-select">
+              <option value="">— Sélectionner une table —</option>
+            </select>
+          </div>
+
+          <div id="form-container">
+            <p class="subtitle">
+              Sélectionnez une table ci-dessus pour générer automatiquement le
+              formulaire d’insertion.
+            </p>
+          </div>
+
+          <div id="insert-result" class="message" style="display: none"></div>
+        </section>
+
+        <section class="card">
+          <div
+            style="display: flex; justify-content: space-between; gap: 12px; align-items: center"
+          >
+            <div>
+              <h2>Appel RPC</h2>
+              <p class="subtitle">
+                Exécutez une fonction Postgres exposée via Supabase
+                (<code>rpc</code>).
+              </p>
+            </div>
+            <span class="pill">Avancé</span>
+          </div>
+
+          <form id="rpc-form">
+            <div class="form-row">
+              <label for="rpc-function-name">Nom de la fonction RPC</label>
+              <input
+                type="text"
+                id="rpc-function-name"
+                placeholder="ex : match_recipes, refresh_embeddings"
+                required
+              />
+            </div>
+
+            <div class="form-row">
+              <label for="rpc-params">Paramètres (JSON, optionnel)</label>
+              <textarea
+                id="rpc-params"
+                rows="6"
+                placeholder='{"id": 1, "limit": 10}'
+              ></textarea>
+              <small>
+                Laissez vide si la fonction ne prend pas de paramètres. Sinon,
+                saisissez un objet JSON valide.
+              </small>
+            </div>
+
+            <div class="button-row">
+              <button type="submit" class="primary">
+                Exécuter la fonction
+              </button>
+              <span id="rpc-status" class="subtitle"></span>
+            </div>
+          </form>
+
+          <pre
+            id="rpc-result"
+            class="message rpc-result"
+            style="display: none"
+          ></pre>
+        </section>
+      </main>
+
+      <footer>
+        Pensez à adapter vos politiques RLS pour autoriser les
+        <code>INSERT</code> et <code>rpc</code> pour le rôle
+        <code>anon</code> si nécessaire.
+      </footer>
+    </div>
+
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+      const supabaseUrl = "<<<SUPABASE_URL>>>";
+      const supabaseKey = "<<<SUPABASE_ANON_KEY>>>";
+
+      if (
+        !supabaseUrl ||
+        !supabaseKey ||
+        supabaseUrl.includes("<<<") ||
+        supabaseKey.includes("<<<")
+      ) {
+        console.warn(
+          "[Supabase] Supabase URL ou clé publique manquante. Modifiez les constantes supabaseUrl et supabaseKey dans index.html."
+        );
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      /**
+       * Configuration des tables.
+       * Adaptez les colonnes pour les faire correspondre exactement à votre schéma Supabase.
+       */
+      const TABLE_CONFIG = {
+        recettes_web: {
+          label: "recettes_web",
+          fields: [
+            {
+              name: "title",
+              label: "Titre",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "slug",
+              label: "Slug",
+              type: "text",
+              required: true,
+              placeholder: "ex : tarte-aux-pommes",
+            },
+            {
+              name: "summary",
+              label: "Résumé",
+              type: "textarea",
+            },
+            {
+              name: "url",
+              label: "URL source",
+              type: "text",
+            },
+            {
+              name: "tags",
+              label: "Tags",
+              type: "tags",
+              placeholder: "ex : dessert, rapide, sucré",
+              helperText: "Liste de tags séparés par des virgules.",
+            },
+            {
+              name: "status",
+              label: "Statut",
+              type: "select",
+              options: ["draft", "published", "archived"],
+            },
+            {
+              name: "difficulty",
+              label: "Difficulté",
+              type: "select",
+              options: ["easy", "medium", "hard"],
+            },
+            {
+              name: "published_at",
+              label: "Date de publication",
+              type: "datetime",
+            },
+          ],
+        },
+
+        etapes: {
+          label: "etapes",
+          fields: [
+            {
+              name: "recipe_id",
+              label: "ID recette",
+              type: "number",
+              required: true,
+            },
+            {
+              name: "position",
+              label: "Position / ordre",
+              type: "number",
+            },
+            {
+              name: "title",
+              label: "Titre de l'étape",
+              type: "text",
+            },
+            {
+              name: "content",
+              label: "Contenu / instructions",
+              type: "textarea",
+            },
+          ],
+        },
+
+        ingredients: {
+          label: "ingredients",
+          fields: [
+            {
+              name: "name",
+              label: "Nom",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "slug",
+              label: "Slug",
+              type: "text",
+            },
+            {
+              name: "default_unit",
+              label: "Unité par défaut",
+              type: "text",
+            },
+            {
+              name: "tags",
+              label: "Tags",
+              type: "tags",
+              placeholder: "ex : légume, bio",
+              helperText: "Liste de tags séparés par des virgules.",
+            },
+            {
+              name: "metadata",
+              label: "Métadonnées (JSON)",
+              type: "json",
+            },
+          ],
+        },
+
+        recipes: {
+          label: "recipes",
+          fields: [
+            {
+              name: "title",
+              label: "Titre",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "slug",
+              label: "Slug",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "description",
+              label: "Description",
+              type: "textarea",
+            },
+            {
+              name: "difficulty",
+              label: "Difficulté",
+              type: "select",
+              options: ["easy", "medium", "hard"],
+            },
+            {
+              name: "status",
+              label: "Statut",
+              type: "select",
+              options: ["draft", "published", "archived"],
+            },
+            {
+              name: "tags",
+              label: "Tags",
+              type: "tags",
+              helperText: "Liste de tags séparés par des virgules.",
+            },
+            {
+              name: "published_at",
+              label: "Date de publication",
+              type: "datetime",
+            },
+            {
+              name: "publish_at",
+              label: "Date de mise en ligne programmée",
+              type: "datetime",
+            },
+            {
+              name: "metadata",
+              label: "Métadonnées (JSON)",
+              type: "json",
+            },
+          ],
+        },
+
+        recipe_steps: {
+          label: "recipe_steps",
+          fields: [
+            {
+              name: "recipe_id",
+              label: "ID recette",
+              type: "number",
+              required: true,
+            },
+            {
+              name: "step_number",
+              label: "Numéro d'étape",
+              type: "number",
+              required: true,
+            },
+            {
+              name: "title",
+              label: "Titre",
+              type: "text",
+            },
+            {
+              name: "content",
+              label: "Contenu",
+              type: "textarea",
+            },
+          ],
+        },
+
+        recipe_ingredients: {
+          label: "recipe_ingredients",
+          fields: [
+            {
+              name: "recipe_id",
+              label: "ID recette",
+              type: "number",
+              required: true,
+            },
+            {
+              name: "ingredient_id",
+              label: "ID ingrédient",
+              type: "number",
+              required: true,
+            },
+            {
+              name: "quantity",
+              label: "Quantité",
+              type: "number",
+            },
+            {
+              name: "unit",
+              label: "Unité",
+              type: "text",
+            },
+            {
+              name: "metadata",
+              label: "Métadonnées (JSON)",
+              type: "json",
+            },
+          ],
+        },
+
+        knowledge_base: {
+          label: "knowledge_base",
+          fields: [
+            {
+              name: "slug",
+              label: "Slug",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "title",
+              label: "Titre",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "content",
+              label: "Contenu",
+              type: "textarea",
+              required: true,
+            },
+            {
+              name: "tags",
+              label: "Tags",
+              type: "tags",
+              helperText: "Liste de tags séparés par des virgules.",
+            },
+            {
+              name: "status",
+              label: "Statut",
+              type: "select",
+              options: ["draft", "published", "archived"],
+            },
+            {
+              name: "embedding_data",
+              label: "Données d'embedding (JSON)",
+              type: "json",
+            },
+            {
+              name: "metadata",
+              label: "Métadonnées (JSON)",
+              type: "json",
+            },
+            {
+              name: "published_at",
+              label: "Date de publication",
+              type: "datetime",
+            },
+          ],
+        },
+
+        posts: {
+          label: "posts",
+          fields: [
+            {
+              name: "slug",
+              label: "Slug",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "title",
+              label: "Titre",
+              type: "text",
+              required: true,
+            },
+            {
+              name: "excerpt",
+              label: "Extrait",
+              type: "textarea",
+            },
+            {
+              name: "content",
+              label: "Contenu",
+              type: "textarea",
+            },
+            {
+              name: "tags",
+              label: "Tags",
+              type: "tags",
+              helperText: "Liste de tags séparés par des virgules.",
+            },
+            {
+              name: "status",
+              label: "Statut",
+              type: "select",
+              options: ["draft", "published", "archived"],
+            },
+            {
+              name: "published_at",
+              label: "Date de publication",
+              type: "datetime",
+            },
+            {
+              name: "publish_at",
+              label: "Date de mise en ligne programmée",
+              type: "datetime",
+            },
+            {
+              name: "metadata",
+              label: "Métadonnées (JSON)",
+              type: "json",
+            },
+          ],
+        },
+      };
+
+      const tableSelect = document.getElementById("table-select");
+      const formContainer = document.getElementById("form-container");
+      const insertResultEl = document.getElementById("insert-result");
+      const rpcForm = document.getElementById("rpc-form");
+      const rpcStatus = document.getElementById("rpc-status");
+      const rpcResult = document.getElementById("rpc-result");
+
+      function populateTableSelect() {
+        Object.entries(TABLE_CONFIG).forEach(([tableName, config]) => {
+          const option = document.createElement("option");
+          option.value = tableName;
+          option.textContent = config.label || tableName;
+          tableSelect.appendChild(option);
+        });
+
+        const firstTable =
+          tableSelect.options.length > 1 ? tableSelect.options[1].value : "";
+        if (firstTable) {
+          tableSelect.value = firstTable;
+          renderFormForTable(firstTable);
+        }
+      }
+
+      function renderFormForTable(tableName) {
+        const config = TABLE_CONFIG[tableName];
+        formContainer.innerHTML = "";
+        hideInsertMessage();
+
+        if (!config) {
+          const p = document.createElement("p");
+          p.className = "subtitle";
+          p.textContent =
+            "Aucune configuration trouvée pour cette table. Vérifiez TABLE_CONFIG.";
+          formContainer.appendChild(p);
+          return;
+        }
+
+        const form = document.createElement("form");
+        form.id = "insert-form";
+
+        const fieldsGrid = document.createElement("div");
+        fieldsGrid.className = "fields-grid";
+
+        config.fields.forEach((field) => {
+          const fieldId = `field-${tableName}-${field.name}`;
+
+          const row = document.createElement("div");
+          row.className = "form-row";
+
+          const label = document.createElement("label");
+          label.htmlFor = fieldId;
+          label.textContent = field.label || field.name;
+
+          let input;
+          if (field.type === "textarea" || field.type === "json") {
+            input = document.createElement("textarea");
+            input.rows = field.type === "json" ? 5 : 3;
+            if (field.type === "json") {
+              input.placeholder =
+                field.placeholder || '{\n  "clé": "valeur"\n}';
+            }
+          } else if (field.type === "datetime") {
+            input = document.createElement("input");
+            input.type = "datetime-local";
+          } else if (field.type === "tags") {
+            input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = field.placeholder || "tag1, tag2, tag3";
+          } else if (field.type === "select" || field.type === "boolean") {
+            input = document.createElement("select");
+            const empty = document.createElement("option");
+            empty.value = "";
+            empty.textContent = "— Choisir —";
+            input.appendChild(empty);
+
+            const options =
+              field.type === "boolean"
+                ? [
+                    { value: "true", label: "Oui" },
+                    { value: "false", label: "Non" },
+                  ]
+                : (field.options || []).map((v) => ({
+                    value: String(v),
+                    label: String(v),
+                  }));
+
+            options.forEach((opt) => {
+              const o = document.createElement("option");
+              o.value = opt.value;
+              o.textContent = opt.label;
+              input.appendChild(o);
+            });
+          } else {
+            input = document.createElement("input");
+            if (field.type === "number" || field.type === "integer") {
+              input.type = "number";
+              if (field.type === "integer") {
+                input.step = "1";
+              }
+            } else {
+              input.type = "text";
+            }
+          }
+
+          input.id = fieldId;
+          input.name = field.name;
+          if (field.placeholder) {
+            input.placeholder = field.placeholder;
+          }
+          if (field.required) {
+            input.required = true;
+          }
+
+          row.appendChild(label);
+          row.appendChild(input);
+
+          if (field.helperText) {
+            const small = document.createElement("small");
+            small.textContent = field.helperText;
+            row.appendChild(small);
+          }
+
+          fieldsGrid.appendChild(row);
+        });
+
+        form.appendChild(fieldsGrid);
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "button-row";
+
+        const submitButton = document.createElement("button");
+        submitButton.type = "submit";
+        submitButton.className = "primary";
+        submitButton.textContent = `Insérer dans ${config.label || tableName}`;
+
+        buttonRow.appendChild(submitButton);
+        form.appendChild(buttonRow);
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          submitButton.disabled = true;
+          hideInsertMessage();
+
+          try {
+            const payload = buildPayloadFromForm(tableName, config);
+            const { data, error } = await supabase
+              .from(tableName)
+              .insert([payload])
+              .select();
+
+            if (error) {
+              showInsertMessage(
+                `Erreur Supabase : ${error.message}`,
+                "error"
+              );
+              console.error("[Supabase insert error]", error);
+              return;
+            }
+
+            const inserted = Array.isArray(data) ? data[0] : data;
+            showInsertMessage(
+              "Ligne insérée avec succès.\n\n" +
+                JSON.stringify(inserted, null, 2),
+              "success"
+            );
+          } catch (err) {
+            showInsertMessage(
+              `Erreur inattendue : ${err.message}`,
+              "error"
+            );
+            console.error("[Insert unexpected error]", err);
+          } finally {
+            submitButton.disabled = false;
+          }
+        });
+
+        formContainer.appendChild(form);
+      }
+
+      function buildPayloadFromForm(tableName, config) {
+        const payload = {};
+
+        for (const field of config.fields) {
+          const fieldId = `field-${tableName}-${field.name}`;
+          const el = document.getElementById(fieldId);
+          if (!el) continue;
+
+          const rawValue = el.value;
+          const trimmed = typeof rawValue === "string" ? rawValue.trim() : rawValue;
+
+          if (trimmed === "" && !field.required) {
+            continue;
+          }
+
+          switch (field.type) {
+            case "number": {
+              const num = Number(trimmed);
+              if (Number.isNaN(num)) {
+                throw new Error(
+                  `Le champ "${field.label || field.name}" doit être un nombre.`
+                );
+              }
+              payload[field.name] = num;
+              break;
+            }
+            case "integer": {
+              const int = Number.parseInt(trimmed, 10);
+              if (Number.isNaN(int)) {
+                throw new Error(
+                  `Le champ "${field.label || field.name}" doit être un entier.`
+                );
+              }
+              payload[field.name] = int;
+              break;
+            }
+            case "tags": {
+              const tags =
+                trimmed === ""
+                  ? []
+                  : trimmed
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+              payload[field.name] = tags;
+              break;
+            }
+            case "datetime": {
+              if (trimmed) {
+                const date = new Date(trimmed);
+                if (Number.isNaN(date.getTime())) {
+                  throw new Error(
+                    `Le champ "${field.label || field.name}" doit être une date valide.`
+                  );
+                }
+                payload[field.name] = date.toISOString();
+              }
+              break;
+            }
+            case "json": {
+              if (trimmed) {
+                try {
+                  payload[field.name] = JSON.parse(trimmed);
+                } catch (e) {
+                  throw new Error(
+                    `JSON invalide pour le champ "${field.label || field.name}" : ${e.message}`
+                  );
+                }
+              }
+              break;
+            }
+            case "boolean": {
+              if (trimmed === "") {
+                break;
+              }
+              payload[field.name] = trimmed === "true";
+              break;
+            }
+            default: {
+              payload[field.name] = rawValue;
+            }
+          }
+        }
+
+        return payload;
+      }
+
+      function hideInsertMessage() {
+        insertResultEl.style.display = "none";
+        insertResultEl.classList.remove("success", "error");
+        insertResultEl.textContent = "";
+      }
+
+      function showInsertMessage(text, variant) {
+        insertResultEl.style.display = "block";
+        insertResultEl.textContent = text;
+        insertResultEl.classList.remove("success", "error");
+        if (variant === "success") {
+          insertResultEl.classList.add("success");
+        } else if (variant === "error") {
+          insertResultEl.classList.add("error");
+        }
+      }
+
+      tableSelect.addEventListener("change", (event) => {
+        const tableName = event.target.value;
+        if (!tableName) {
+          formContainer.innerHTML =
+            '<p class="subtitle">Sélectionnez une table pour générer le formulaire.</p>';
+          hideInsertMessage();
+          return;
+        }
+        renderFormForTable(tableName);
+      });
+
+      rpcForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const functionName = document
+          .getElementById("rpc-function-name")
+          .value.trim();
+        const paramsRaw = document.getElementById("rpc-params").value.trim();
+
+        rpcStatus.textContent = "";
+        rpcResult.style.display = "none";
+        rpcResult.classList.remove("success", "error");
+        rpcResult.textContent = "";
+
+        if (!functionName) {
+          rpcStatus.textContent = "Veuillez saisir le nom d'une fonction RPC.";
+          return;
+        }
+
+        let params = {};
+        if (paramsRaw) {
+          try {
+            params = JSON.parse(paramsRaw);
+          } catch (e) {
+            rpcStatus.textContent =
+              "JSON invalide pour les paramètres : " + e.message;
+            rpcResult.style.display = "block";
+            rpcResult.classList.add("error");
+            rpcResult.textContent = paramsRaw;
+            return;
+          }
+        }
+
+        const submitButton = rpcForm.querySelector("button[type=submit]");
+        submitButton.disabled = true;
+        rpcStatus.textContent = "Appel en cours…";
+
+        try {
+          const { data, error } = await supabase.rpc(functionName, params);
+
+          if (error) {
+            rpcStatus.textContent = "Erreur lors de l'appel RPC.";
+            rpcResult.style.display = "block";
+            rpcResult.classList.add("error");
+            rpcResult.textContent = error.message;
+            console.error("[Supabase RPC error]", error);
+            return;
+          }
+
+          rpcStatus.textContent = "Appel réussi.";
+          rpcResult.style.display = "block";
+          rpcResult.classList.add("success");
+          rpcResult.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          rpcStatus.textContent = "Erreur inattendue lors de l'appel RPC.";
+          rpcResult.style.display = "block";
+          rpcResult.classList.add("error");
+          rpcResult.textContent = err.message;
+          console.error("[RPC unexpected error]", err);
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      populateTableSelect();
+    </script>
+  </body>
+</html>
