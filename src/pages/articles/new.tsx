@@ -110,20 +110,15 @@ const NewArticlePage = () => {
       // 4. Mise à jour du contenu enrichi et des métadonnées de cache
       const updatePayload: any = {
         cache_key: cacheKey,
+        content_text: enrichment.content_text,
+        key_points: enrichment.key_concepts,
         enrichment_status: enrichment.enrichment_status ?? "completed",
+        rag_metadata: enrichment.rag_metadata,
         published_at:
           values.status === "published"
             ? new Date().toISOString()
             : null
       };
-
-      if (enrichment.content_text) {
-        updatePayload.content_text = enrichment.content_text;
-      }
-      if (enrichment.key_concepts) {
-        // Mapping vers la colonne key_points
-        updatePayload.key_points = enrichment.key_concepts;
-      }
 
       const { error: updateError } = await supabase
         .from("posts")
