@@ -34,20 +34,89 @@ interface AdminRecipe {
 
 type StatusFilter = "all" | "draft" | "scheduled" | "published";
 
-const fetchRecipes = async (): Promise<AdminRecipe[]> => {
-  const { data, error } = await supabase
+interface RecipeQueryParams {
+  page: number;
+  pageSize: number;
+  statusFilter: StatusFilter;
+  difficultyFilter: string;
+  categoryFilter: string;
+  cuisineFilter: string;
+  search: string;
+}
+
+interface RecipeQueryResult {
+  items: AdminRecipe[];
+  total: number;
+  withEmbeddingCount: number;
+}
+
+const fetchRecipes = async (params: RecipeQueryParams): Promise<RecipeQueryResult> => {
+  const {
+    page,
+    pageSize,
+    statusFilter,
+    difficultyFilter,
+    categoryFilter,
+    cuisineFilter,
+    search
+  } = params;
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
     .from("recipes")
     .select(
-      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding"
+      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding",
+      { count: "exact" }
     )
     .order("created_at", { ascending: false })
-    .limit(300);
+    .range(from, to);
+
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  if (difficultyFilter !== "all") {
+    query = query.eq("difficulty", difficultyFilter);
+  }
+
+  if (categoryFilter !== "all") {
+    query = query.eq("category", categoryFilter);
+  }
+
+  if (cuisineFilter !== "all") {
+    query = query.eq("cuisine", cuisineFilter);
+  }
+
+  if (search.trim()) {
+    const term = `%${search.trim()}%`;
+    query = query.or(
+      [
+        `title.ilike.${term}`,
+        `slug.ilike.${term}`,
+        `category.ilike.${term}`,
+        `cuisine.ilike.${term}`,
+        `ingredients_text.ilike.${term}`,
+        `instructions_detailed.ilike.${term}`
+      ].join(",")
+    );
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     throw error;
   }
 
-  return (data as AdminRecipe[]) ?? [];
+  const items = ((data as AdminRecipe[]) ?? []).filter((r) => !!r.id);
+  const withEmbeddingCount = items.filter((r) => r.embedding != null).length;
+
+  return {
+    items,
+    total: count ?? 0,
+    withEmbeddingCount
+  };
 };
 
 const isNonEmpty = (value: string | null | undefined) =>
