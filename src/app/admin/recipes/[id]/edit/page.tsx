@@ -1358,58 +1358,60 @@ const AdminEditRecipePage = () => {
         </section>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-         <<div className="flex items-center gap-2">
-           <<Button
+          <div className="flex items-center gap-2">
+            <Button
               type="submit"
               variant="primary"
               disabled={isSubmitting}
               className="inline-flex items-center gap-2"
             >
               {isSubmitting && (
-               <<LoadingSpinner size="sm" className="text-slate-100" />
+                <LoadingSpinner size="sm" className="text-slate-100" />
               )}
-             <<span>Mettre à jour la recet</</span>
-          </</Button>
+              <span>Mettre à jour la recette</span>
+            </Button>
 
-           <<Button
+            <Button
               type="button"
               variant="secondary"
               className="inline-flex items-center gap-2 text-xs text-red-300 hover:text-red-200"
               onClick={handleDelete}
             >
               Supprimer
-          </</Button>
-        </</div>
+            </Button>
+          </div>
 
-         <<div className="flex flex-col items-end gap-1 text-xs">
-            {message & <<p className="text-emerald-300">{messa}</</p>}
-            {errorMessage & <<p className="text-red-300">{errorMessa}</</p>}
-        </</div>
-      </</div>
-    </</form>
+          <div className="flex flex-col items-end gap-1 text-xs">
+            {message && <p className="text-emerald-300">{message}</p>}
+            {errorMessage && <p className="text-red-300">{errorMessage}</p>}
+          </div>
+        </div>
+      </form>
 
       {/* Onglet 5 : Ingrédients structurés */}
       {id && (
-       <<section className="card mt-4 space-y-4 px-5 py-5">
-         <<RecipeIngredientsEditor recipeId={id} />
-      </</section>
+        <section className="card mt-4 space-y-4 px-5 py-5">
+          <RecipeIngredientsEditor recipeId={id} />
+        </section>
       )}
 
       {/* Onglet 6 : Étapes enrichies */}
       {id && (
-       <<section className="card mt-4 space-y-4 px-5 py-5">
-         <<RecipeStepsEditor recipeId={id} />
-      </</section>
+        <section className="card mt-4 space-y-4 px-5 py-5">
+          <RecipeStepsEditor recipeId={id} />
+        </section>
       )}
 
       {/* Onglet 7 : Concepts scientifiques */}
       {id && (
-       <<section className="card mt-4 space-y-4 px-5 py-5">
+        <section className="card mt-4 space-y-4 px-5 py-5">
           <RecipeConceptsEditor recipeId={id} />
         </section>
       )}
     </div>
   );
 };
+
+export default AdminEditRecipePage;
 
 export default AdminEditRecipePage;
