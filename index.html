@@ -537,6 +537,46 @@
               type: "datetime",
             },
             {
+              name: "meta_title",
+              label: "Titre SEO",
+              type: "text",
+              placeholder: "Titre optimisé pour Google (50-60 caractères)",
+              helperText:
+                "Si vide, le titre de la recette sera utilisé comme balise title.",
+            },
+            {
+              name: "meta_description",
+              label: "Description Meta",
+              type: "textarea",
+              placeholder:
+                "Description pour les résultats Google (150-160 caractères)",
+              helperText:
+                "Si vide, la description de la recette sera utilisée comme meta description.",
+            },
+            {
+              name: "canonical_url",
+              label: "URL canonique",
+              type: "text",
+              placeholder: "https://monsite.com/recettes/...",
+              helperText:
+                "URL principale de la recette pour éviter le contenu dupliqué.",
+            },
+            {
+              name: "og_image_url",
+              label: "Image Open Graph",
+              type: "text",
+              placeholder: "https://monsite.com/images/recette.jpg",
+              helperText:
+                "Image utilisée lors du partage sur les réseaux sociaux.",
+            },
+            {
+              name: "schema_org_json",
+              label: "Schema.org Recipe (JSON-LD)",
+              type: "json",
+              helperText:
+                "Données structurées pour Google (JSON-LD). Idéalement générées automatiquement côté backend.",
+            },
+            {
               name: "metadata",
               label: "Métadonnées (JSON)",
               type: "json",
