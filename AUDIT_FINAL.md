@@ -303,7 +303,7 @@ Les principaux **points d’attention avant production** :
 7. **Rate limiting infra**
    - Limiter `/api/recipes/merge` et futures routes d’admin via le reverse proxy / WAF.
 8. **Typage des intégrations**
-   - Ajouter des types légers pour les stats Redis/S3/Vault dans `dashboard.ts`.
+   - Si les intégrations Redis/S3/Vault sont réactivées à l'avenir, ajouter des types légers pour leurs stats dans `dashboard.ts`. Dans la version actuelle, le dashboard ne dépend plus de ces fonctions.
 
 ---
 

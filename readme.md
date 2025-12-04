@@ -118,11 +118,8 @@ Cette logique est utilisée :
   - Nombre total de recettes (`recipes`) et recettes avec vecteurs S3.
   - Nombre total d’articles (`posts`), articles enrichis et mis en cache.
   - Nombre total d’utilisateurs (`user_profiles`).
-  - Indicateurs d’intégrations :
-    - Stats Redis (`redis-wrapper`)
-    - Stats S3 vecteurs (`s3-vectors-wrapper`)
-    - Stats chiffrement Vault (`vault-wrapper`)
-- Présentation en cartes “card” avec métriques et explications (RAG & intégrations).
+- Présentation en cartes “card” avec métriques et explications (RAG).
+- Les intégrations avancées (Redis, S3 externe, Vault) sont optionnelles et ne sont plus requises par le dashboard par défaut.
 
 ---
 

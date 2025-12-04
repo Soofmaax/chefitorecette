@@ -19,20 +19,16 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ---
 
-## 2. Typer les stats Redis / S3 / Vault dans le dashboard
+## 2. Plus de bruit CORS sur le dashboard RAG
 
 - **Description**  
-  Remplacer les `any` dans `src/lib/dashboard.ts` par de petites interfaces `RedisStats`, `S3Stats`, `VaultStats`.
-- **Effort estimé** : 20–30 min  
-- **Impact** : moyen (qualité TS, DX)
+  Simplifier le dashboard pour ne plus dépendre des Edge Functions `redis-wrapper`, `s3-vectors-wrapper`, `vault-wrapper` tant qu'elles ne sont pas configurées dans Supabase.
+- **Effort estimé** : 15–20 min  
+- **Impact** : moyen/élevé (console propre, onboarding plus simple)
 - **Détails** :
-  - Définir :
-    ```ts
-    interface RedisStats { hitRatio?: number; [k: string]: unknown }
-    interface S3Stats { used?: number; [k: string]: unknown }
-    interface VaultStats { encryptedCount?: number; [k: string]: unknown }
-    ```
-  - Caster les réponses Supabase functions vers ces types au lieu de `any`.
+  - Modifier `src/lib/dashboard.ts` pour ne plus appeler `supabase.functions.invoke` sur ces wrappers.
+  - Garder uniquement les stats qui dépendent des tables (`recipes`, `posts`, `user_profiles`).
+  - Mettre à jour la doc pour préciser que les intégrations Redis/S3/Vault sont optionnelles et non requises pour utiliser l'admin.
 
 ---
 
