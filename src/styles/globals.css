@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-50 antialiased;
+}
+
+input,
+textarea,
+select {
+  @apply bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+}
+
+label {
+  @apply block text-xs font-medium text-slate-300 mb-1;
+}
+
+.form-error {
+  @apply mt-1 text-xs text-red-400;
+}
+
+.card {
+  @apply rounded-xl border border-slate-800 bg-slate-900/80 shadow-lg shadow-slate-950/50;
+}
