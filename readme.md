@@ -64,11 +64,11 @@ Une recette est considérée **“premium”** si elle respecte l’ensemble des
      - `chef_tips`
      - `difficulty_detailed`
 
-6. **Noyau RAG**
-   - Un embedding est présent pour la recette (`embedding` non nul)
+> Remarque : la présence d’un **embedding RAG** n’est **pas** un critère de “recette premium”.  
+> C’est une information technique complémentaire (affichée dans l’UI) qui peut être mise à jour à la demande, mais la qualité premium reste un jugement éditorial / SEO.
 
 Si **au moins un** de ces critères manque, la recette est considérée comme **“à enrichir”**.  
-L’UI liste les critères manquants sous forme de badges (ex. _“Image”_, _“Notes nutritionnelles”_, _“Embedding RAG”_).
+L’UI liste les critères manquants sous forme de badges (ex. _“Image”_, _“Notes nutritionnelles”_, _“Titre SEO”_).
 
 Cette logique est utilisée :
 
@@ -107,7 +107,7 @@ Affichage (via `src/app/admin/recipes/page.tsx`) :
   - `ingredients_text`, `instructions_detailed`
   - `chef_tips`, `cultural_history`, `techniques`, `difficulty_detailed`, `nutritional_notes`
   - `meta_title`, `meta_description`
-  - `embedding`
+  - `embedding` (optionnel, indicateur technique)
 
 Fonctionnalités :
 
@@ -115,15 +115,22 @@ Fonctionnalités :
   - `status` : `draft`, `scheduled`, `published`, ou “tous”
   - `difficulty` : `beginner`, `intermediate`, `advanced`, ou “toutes”
   - `category`, `cuisine` : listes des valeurs distinctes trouvées dans la base
-- **Recherche plein texte** :
-  - Sur `title`, `slug`, `category`, `cuisine`, `ingredients_text`, `instructions_detailed`
+- **Recherche** :
+  - Recherche plein texte :
+    - Sur `title`, `slug`, `category`, `cuisine`, `ingredients_text`, `instructions_detailed`
+  - Recherche ciblée :
+    - Champ dédié pour saisir un **ID** ou un **slug exact** et accéder directement à une recette précise.
+- **Pagination côté base** :
+  - Pages de 50 recettes (configurable),
+  - Tri par `created_at` (les plus récentes en premier),
+  - Affichage du nombre total de recettes correspondant aux filtres.
 - **Qualité premium** :
-  - Badge **✅ “enrichie”** si tous les critères premium sont remplis.
+  - Badge **✅ “enrichie”** si tous les critères premium (éditoriaux/SEO) sont remplis.
   - Badge **⚠️ “à enrichir”** sinon.
   - Badge rouge indiquant le nombre de champs manquants : `X champ(s) manquant(s)` (critères premium).
 - **Embeddings** :
   - Colonne indiquant si l’embedding est présent (`Présent` / `Manquant`).
-  - Bouton “Recalculer embedding” pour déclencher `generate-recipe-embedding`.
+  - Bouton “Recalculer embedding” pour déclencher `generate-recipe-embedding` (usage optionnel).
 
 Actions :
 
@@ -238,9 +245,10 @@ Dans la page d’édition, un panneau récapitule :
 - **Statut premium** :
   - `recette premium` (si aucun critère manquant) ou
   - `à enrichir pour être premium` (liste des critères manquants).
-- **Embedding RAG** :
+- **Embedding RAG** (facultatif) :
   - Indication `Présent` / `Manquant` (via `recipe.embedding`).
   - Bouton “Générer / recalculer l’embedding”.
+  - L’embedding n’influence pas le statut premium, il sert uniquement à la recherche/RAG.
 - **Concepts scientifiques** :
   - Nombre de concepts liés via `recipe_concepts`.
   - Bouton vers `/admin/knowledge` pour gérer `knowledge_base`.
@@ -421,7 +429,8 @@ Si tu veux conserver cette interface minimaliste pour du debug ponctuel, tu peux
 
 En pratique, le backoffice te permet aujourd’hui :
 
-- De **lister et filtrer** les recettes et voir immédiatement lesquelles sont au niveau “premium”.
+- De **lister et filtrer** les recettes à grande échelle (pagination serveur) et voir immédiatement lesquelles sont au niveau “premium”.
+- De **retrouver instantanément** une recette précise via un champ de recherche par **ID ou slug exact**.
 - D’**éditer en profondeur** une recette :
   - base éditoriale,
   - ingrédients texte + ingrédients normalisés,
@@ -429,7 +438,7 @@ En pratique, le backoffice te permet aujourd’hui :
   - SEO,
   - image,
   - statut et publication.
-- De **piloter la qualité premium** via une définition claire et visible dans l’UI.
+- De **piloter la qualité premium** via une définition claire et visible dans l’UI, indépendante de l’IA.
 - De **gérer les alertes de similarité** :
   - marquage parent/enfant,
   - rejet,
@@ -441,6 +450,7 @@ En pratique, le backoffice te permet aujourd’hui :
   - métadonnées,
   - mappings vers des ingrédients / concepts / actions,
   - suivi des usages audio par recette.
+- D’**exploiter les embeddings** comme couche technique optionnelle (RAG/recherche) sans qu’ils bloquent le statut premium.
 
 Cette doc reflète l’état fonctionnel actuel du projet.  
 Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : CRUD complet sur `knowledge_base`, workflows de travail `work_progress`, analytics audio plus poussés, etc.).
@@ -487,6 +497,43 @@ Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : CRUD
   - Utilise `SUPABASE_SERVICE_ROLE_KEY`.
   - Uniquement dans les routes `/app/api/*` (ex. fusion de recettes).
   - Permet des opérations globales (migration de données entre recettes), tout en vérifiant côté route que l’utilisateur connecté a bien le rôle admin.
+
+---
+
+## 6.3. CI / qualité code
+
+- **GitHub Actions** :
+  - Workflow `CI` dans `.github/workflows/ci.yml`.
+  - Se déclenche sur `push` (branches principales) et `pull_request`.
+  - Étapes :
+    - `npm install`
+    - `npm run lint`
+    - `npm run typecheck`
+    - `npm run build`
+- **Scripts npm** utiles :
+  - `npm run dev` : dev server Next.
+  - `npm run lint` : ESLint (Next).
+  - `npm run typecheck` : TypeScript sans émission.
+  - `npm run build` : build Next (vérifie aussi les erreurs runtime côté compilation).
+
+---
+
+## 6.4. Index SQL pour scaler les recettes
+
+Un fichier `sql/indexes_recipes.sql` propose une série d’indexes à appliquer dans Supabase pour garder une bonne performance quand le nombre de recettes augmente :
+
+- Index sur les colonnes de filtre :
+  - `status`, `difficulty`, `category`, `cuisine`
+- Index sur les colonnes d’accès direct :
+  - `slug`, `created_at`
+
+Utilisation :
+
+1. Ouvrir le **SQL editor** dans Supabase.
+2. Coller le contenu de `sql/indexes_recipes.sql`.
+3. Exécuter les commandes (`create index if not exists …`).
+
+Une suggestion de mise en place d’un index full-text (`tsvector` + index GIN) est aussi fournie en commentaire pour aller plus loin sur la recherche sémantique.
 
 ---
 
@@ -575,8 +622,8 @@ Objectif : utiliser le backoffice comme point de contrôle et d’observation de
 
 1. **Vérifier l’état des embeddings**
    - `/admin/recipes` :
-     - Colonnes “Embedding” et “Qualité”.
-     - Identifier les recettes sans embedding ou non premium.
+     - Colonne “Embedding” pour repérer les recettes sans vecteur.
+     - Le statut premium reste indépendant de l’IA (uniquement éditorial/SEO).
    - `/admin/recipes/[id]/edit` :
      - Utiliser le bouton “Générer / recalculer l’embedding” pour forcer un refresh.
    - Vérifier les Edge functions (`generate-recipe-embedding`, `redis-wrapper`, `s3-vectors-wrapper`, `vault-wrapper`).
