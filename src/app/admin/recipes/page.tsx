@@ -334,10 +334,11 @@ const AdminRecipesPage = () => {
                   return (
                     <tr key={recipe.id}>
                       <td className="px-4 py-2 align-top">
-                        <Link href={`/admin/recipes/${recipe.id}/edit`}>
-                          <a className="font-medium text-slate-100 hover:underline">
-                            {recipe.title}
-                          </a>
+                        <Link
+                          href={`/admin/recipes/${recipe.id}/edit`}
+                          className="font-medium text-slate-100 hover:underline"
+                        >
+                          {recipe.title}
                         </Link>
                         <div className="mt-0.5 text-xs text-slate-500">
                           {recipe.slug}
@@ -402,14 +403,12 @@ const AdminRecipesPage = () => {
                       <td className="px-4 py-2 align-top text-right">
                         <div className="flex flex-col items-end gap-2">
                           <Link href={`/admin/recipes/${recipe.id}/edit`}>
-                            <a>
-                              <Button
-                                variant="secondary"
-                                className="inline-flex items-center gap-2 text-xs"
-                              >
-                                Éditer
-                              </Button>
-                            </a>
+                            <Button
+                              variant="secondary"
+                              className="inline-flex items-center gap-2 text-xs"
+                            >
+                              Éditer
+                            </Button>
                           </Link>
 
                           <Button

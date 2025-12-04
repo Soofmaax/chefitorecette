@@ -13,6 +13,8 @@ import { triggerEmbedding } from "@/lib/embeddings";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEditor";
+import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
 
 const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
@@ -796,6 +798,20 @@ const AdminEditRecipePage = () => {
           </div>
         </div>
       </form>
+
+      {/* Onglet 5 : Ingrédients structurés */}
+      {id && (
+        <section className="card mt-4 space-y-4 px-5 py-5">
+          <RecipeIngredientsEditor recipeId={id} />
+        </section>
+      )}
+
+      {/* Onglet 6 : Étapes enrichies */}
+      {id && (
+        <section className="card mt-4 space-y-4 px-5 py-5">
+          <RecipeStepsEditor recipeId={id} />
+        </section>
+      )}
     </div>
   );
 };

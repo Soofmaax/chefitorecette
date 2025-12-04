@@ -144,6 +144,32 @@ const AdminAlertsPage = () => {
     }
   });
 
+  const mergeRecipes = useMutation({
+    mutationFn: async (params: {
+      alertId: string;
+      canonicalId: string;
+      duplicateId: string;
+    }) => {
+      const res = await fetch("/api/recipes/merge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(params)
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(
+          payload?.error ?? "Erreur lors de la fusion des recettes."
+        );
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["similarity-alerts"] });
+    }
+  });
+
   const pendingCount = alerts?.length ?? 0;
 
   const sortedAlerts = useMemo(
@@ -223,10 +249,9 @@ const AdminAlertsPage = () => {
                         <div className="space-y-1">
                           <Link
                             href={`/admin/recipes/${newRecipe.id}/edit`}
+                            className="text-sm font-medium text-slate-100 hover:underline"
                           >
-                            <a className="text-sm font-medium text-slate-100 hover:underline">
-                              {newRecipe.title}
-                            </a>
+                            {newRecipe.title}
                           </Link>
                           <p className="text-xs text-slate-500">
                             {newRecipe.slug}
@@ -247,10 +272,9 @@ const AdminAlertsPage = () => {
                         <div className="space-y-1">
                           <Link
                             href={`/admin/recipes/${similarRecipe.id}/edit`}
+                            className="text-sm font-medium text-slate-100 hover:underline"
                           >
-                            <a className="text-sm font-medium text-slate-100 hover:underline">
-                              {similarRecipe.title}
-                            </a>
+                            {similarRecipe.title}
                           </Link>
                           <p className="text-xs text-slate-500">
                             {similarRecipe.slug}
@@ -274,6 +298,7 @@ const AdminAlertsPage = () => {
                       disabled={
                         resolveAsParentChild.isLoading ||
                         resolveAsDifferent.isLoading ||
+                        mergeRecipes.isLoading ||
                         !newRecipe ||
                         !similarRecipe
                       }
@@ -296,6 +321,7 @@ const AdminAlertsPage = () => {
                       disabled={
                         resolveAsParentChild.isLoading ||
                         resolveAsDifferent.isLoading ||
+                        mergeRecipes.isLoading ||
                         !newRecipe ||
                         !similarRecipe
                       }
@@ -317,7 +343,8 @@ const AdminAlertsPage = () => {
                       className="text-xs text-red-300 hover:text-red-200"
                       disabled={
                         resolveAsParentChild.isLoading ||
-                        resolveAsDifferent.isLoading
+                        resolveAsDifferent.isLoading ||
+                        mergeRecipes.isLoading
                       }
                       onClick={() => resolveAsDifferent.mutate(alert.id)}
                     >
@@ -327,16 +354,51 @@ const AdminAlertsPage = () => {
                     <Button
                       type="button"
                       variant="secondary"
-                      className="text-xs opacity-60"
-                      disabled
+                      className="text-xs"
+                      disabled={
+                        mergeRecipes.isLoading ||
+                        !newRecipe ||
+                        !similarRecipe
+                      }
+                      onClick={() => {
+                        if (!newRecipe || !similarRecipe) return;
+                        // Par défaut : garder la recette existante comme canonique
+                        mergeRecipes.mutate({
+                          alertId: alert.id,
+                          canonicalId: similarRecipe.id,
+                          duplicateId: newRecipe.id
+                        });
+                      }}
                     >
-                      Fusionner les doublons (à implémenter)
+                      Fusionner (garder la recette existante)
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="text-xs"
+                      disabled={
+                        mergeRecipes.isLoading ||
+                        !newRecipe ||
+                        !similarRecipe
+                      }
+                      onClick={() => {
+                        if (!newRecipe || !similarRecipe) return;
+                        // Variante : garder la nouvelle comme canonique
+                        mergeRecipes.mutate({
+                          alertId: alert.id,
+                          canonicalId: newRecipe.id,
+                          duplicateId: similarRecipe.id
+                        });
+                      }}
+                    >
+                      Fusionner (garder la nouvelle)
                     </Button>
                   </div>
                 </div>
               </div>
             );
-          })
+          })}
         )}
       </div>
     </div>

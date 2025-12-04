@@ -36,19 +36,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onNavigate }) => {
           pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
-          <Link key={item.href} href={item.href}>
-            <a
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
-                active
-                  ? "bg-slate-800 text-primary-200"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{item.name}</span>
-            </a>
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition",
+              active
+                ? "bg-slate-800 text-primary-200"
+                : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            <span>{item.name}</span>
           </Link>
         );
       })}
