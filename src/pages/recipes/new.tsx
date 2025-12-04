@@ -5,6 +5,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase, getCurrentUser } from "@/lib/supabaseClient";
 import { cacheContentInRedis } from "@/lib/integrations";
 import { uploadRecipeImage } from "@/lib/storage";
+import { generateSlug } from "@/lib/slug";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -12,6 +13,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 const NewRecipePage = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const {
     control,
@@ -23,12 +25,30 @@ const NewRecipePage = () => {
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
+      slug: "",
       description: "",
-      ingredients: [],
-      instructions: "",
+      image_url: "",
+      prep_time_min: 0,
+      cook_time_min: 0,
+      servings: 1,
+      difficulty: "beginner",
       category: "",
+      cuisine: "",
       tags: [],
-      image_url: ""
+      status: "draft",
+      publish_at: "",
+      ingredients_text: "",
+      instructions_detailed: "",
+      chef_tips: "",
+      cultural_history: "",
+      techniques: "",
+      source_info: "",
+      difficulty_detailed: "",
+      nutritional_notes: "",
+      meta_title: "",
+      meta_description: "",
+      canonical_url: "",
+      og_image_url: ""
     }
   });
 
@@ -42,7 +62,7 @@ const NewRecipePage = () => {
         throw new Error("Utilisateur non connecté");
       }
 
-      // 1. Traiter l'upload d'image si fourni
+      // Traiter l'upload d'image si fourni
       let imageUrlToSave: string | null = values.image_url || null;
 
       if (imageFile) {
@@ -50,18 +70,52 @@ const NewRecipePage = () => {
         imageUrlToSave = uploadedUrl;
       }
 
-      // 2. Insérer la recette
+      if (!imageUrlToSave) {
+        throw new Error(
+          "Merci d’ajouter une image (via URL ou upload) pour cette recette."
+        );
+      }
+
+      // Slug : utiliser celui fourni ou le générer depuis le titre
+      const slug =
+        (values.slug && values.slug.trim()) || generateSlug(values.title);
+
+      // publish_at : convertir en ISO si fourni
+      let publishAtIso: string | null = null;
+      if (values.publish_at) {
+        const d = new Date(values.publish_at);
+        if (!Number.isNaN(d.getTime())) {
+          publishAtIso = d.toISOString();
+        }
+      }
+
+      // 1. Insérer la recette dans la table public.recipes
       const payload = {
+        slug,
         title: values.title,
         description: values.description,
-        ingredients: values.ingredients,
-        instructions: values.instructions,
-        category: values.category,
-        tags: values.tags,
         image_url: imageUrlToSave,
-        user_id: user.id,
-        embedding_status: "pending",
-        created_at: new Date().toISOString()
+        prep_time_min: values.prep_time_min,
+        cook_time_min: values.cook_time_min,
+        servings: values.servings,
+        difficulty: values.difficulty,
+        category: values.category,
+        cuisine: values.cuisine,
+        tags: values.tags,
+        status: values.status,
+        publish_at: publishAtIso,
+        ingredients_text: values.ingredients_text,
+        instructions_detailed: values.instructions_detailed,
+        chef_tips: values.chef_tips || null,
+        cultural_history: values.cultural_history || null,
+        techniques: values.techniques || null,
+        source_info: values.source_info || null,
+        difficulty_detailed: values.difficulty_detailed || null,
+        nutritional_notes: values.nutritional_notes || null,
+        meta_title: values.meta_title || null,
+        meta_description: values.meta_description || null,
+        canonical_url: values.canonical_url || null,
+        og_image_url: values.og_image_url || null
       };
 
       const { data: recipe, error } = await supabase
@@ -74,7 +128,7 @@ const NewRecipePage = () => {
         throw error;
       }
 
-      // 2. Déclencher la génération d’embedding (Edge Function)
+      // 2. Déclencher la génération d’embedding (Edge Function RAG)
       const { data: embeddingData, error: embeddingError } =
         await supabase.functions.invoke("generate-recipe-embedding", {
           body: { recipe_id: recipe.id, recipe_data: values }
@@ -86,50 +140,58 @@ const NewRecipePage = () => {
 
       const embeddingResponse = embeddingData as any;
 
-      // La fonction renvoie :
-      // { success: true, recipe_id, embedding_dim, message } ou { error }
       if (!embeddingResponse?.success) {
-        const message =
+        const msg =
           embeddingResponse?.error ??
           embeddingResponse?.message ??
           "Échec de la génération de l’embedding.";
-        throw new Error(message);
+        throw new Error(msg);
       }
 
-      // 3. Mise à jour éventuelle du statut dans la table recipes
-      // (le backend peut aussi gérer ce champ côté DB, ici on confirme côté UI)
-      const { error: updateError } = await supabase
-        .from("recipes")
-        .update({
-          embedding_status: "completed"
-        })
-        .eq("id", recipe.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // 4. Cache Redis pour accès rapide
+      // 3. Mettre en cache la recette enrichie dans Redis (optionnel mais utile pour le RAG)
       const cacheKey = `recipe:${recipe.id}`;
-      await cacheContentInRedis(cacheKey, {
-        ...recipe,
-        embeddingGenerated: true,
-        embedding_dim: embeddingResponse.embedding_dim,
-        message: embeddingResponse.message
-      });
+      try {
+        await cacheContentInRedis(cacheKey, {
+          ...recipe,
+          embeddingGenerated: true,
+          embedding_dim: embeddingResponse.embedding_dim,
+          message: embeddingResponse.message
+        });
+      } catch {
+        // On ne bloque pas la création en cas d'erreur de cache
+      }
 
       setMessage(
         "Recette créée, embedding généré (Edge Function) et cache Redis mis à jour."
       );
       reset({
         title: "",
+        slug: "",
         description: "",
-        ingredients: [],
-        instructions: "",
+        image_url: "",
+        prep_time_min: 0,
+        cook_time_min: 0,
+        servings: 1,
+        difficulty: "beginner",
         category: "",
+        cuisine: "",
         tags: [],
-        image_url: ""
+        status: "draft",
+        publish_at: "",
+        ingredients_text: "",
+        instructions_detailed: "",
+        chef_tips: "",
+        cultural_history: "",
+        techniques: "",
+        source_info: "",
+        difficulty_detailed: "",
+        nutritional_notes: "",
+        meta_title: "",
+        meta_description: "",
+        canonical_url: "",
+        og_image_url: ""
       });
+      setImageFile(null);
       // eslint-disable-next-line no-console
       console.log("Recette créée :", recipe, embeddingResponse);
     } catch (err: any) {
@@ -148,17 +210,18 @@ const NewRecipePage = () => {
           Nouvelle recette
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Ajoutez une recette. Les embeddings seront générés par la fonction
-          Edge, stockés dans S3 et mis en cache via Redis.
+          Créez une fiche recette complète (texte, temps, culture, SEO). La
+          recette alimentera ensuite votre système RAG.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="card space-y-5 px-5 py-5"
+        className="card space-y-6 px-5 py-5"
       >
+        {/* Bloc titre / slug / description */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div>
+          <div className="md:col-span-2">
             <label htmlFor="title">Titre</label>
             <input
               id="title"
@@ -170,6 +233,20 @@ const NewRecipePage = () => {
             {errors.title && (
               <p className="form-error">{errors.title.message}</p>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="slug">Slug</label>
+            <input
+              id="slug"
+              type="text"
+              className="mt-1 w-full"
+              placeholder="tarte-aux-pommes-croustillante"
+              {...register("slug")}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Laissez vide pour générer automatiquement à partir du titre.
+            </p>
           </div>
 
           <div>
@@ -186,50 +263,123 @@ const NewRecipePage = () => {
             )}
           </div>
 
+          <div>
+            <label htmlFor="cuisine">Cuisine</label>
+            <input
+              id="cuisine"
+              type="text"
+              className="mt-1 w-full"
+              placeholder="française, italienne, japonaise…"
+              {...register("cuisine")}
+            />
+            {errors.cuisine && (
+              <p className="form-error">{errors.cuisine.message}</p>
+            )}
+          </div>
+
           <div className="md:col-span-2">
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description">Description courte</label>
             <textarea
               id="description"
               rows={3}
               className="mt-1 w-full"
-              placeholder="Brève description de la recette…"
+              placeholder="Brève description éditoriale de la recette…"
               {...register("description")}
             />
             {errors.description && (
               <p className="form-error">{errors.description.message}</p>
             )}
           </div>
+        </div>
 
-          <div className="md:col-span-2">
-            <label>Ingrédients</label>
-            <Controller
-              control={control}
-              name="ingredients"
-              render={({ field }) => (
-                <TagInput
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Ajoutez un ingrédient et validez avec Entrée (ex : 200g farine)"
-                />
-              )}
+        {/* Bloc temps / portions / difficulté / statut */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <div>
+            <label htmlFor="prep_time_min">Préparation (min)</label>
+            <input
+              id="prep_time_min"
+              type="number"
+              className="mt-1 w-full"
+              min={0}
+              {...register("prep_time_min", { valueAsNumber: true })}
             />
-            {errors.ingredients && (
-              <p className="form-error">{errors.ingredients.message}</p>
+            {errors.prep_time_min && (
+              <p className="form-error">{errors.prep_time_min.message}</p>
             )}
           </div>
 
-          <div className="md:col-span-2">
-            <label htmlFor="instructions">Instructions</label>
-            <textarea
-              id="instructions"
-              rows={6}
+          <div>
+            <label htmlFor="cook_time_min">Cuisson (min)</label>
+            <input
+              id="cook_time_min"
+              type="number"
               className="mt-1 w-full"
-              placeholder="Détaillez les étapes de préparation de la recette…"
-              {...register("instructions")}
+              min={0}
+              {...register("cook_time_min", { valueAsNumber: true })}
             />
-            {errors.instructions && (
-              <p className="form-error">{errors.instructions.message}</p>
+            {errors.cook_time_min && (
+              <p className="form-error">{errors.cook_time_min.message}</p>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="servings">Portions</label>
+            <input
+              id="servings"
+              type="number"
+              className="mt-1 w-full"
+              min={1}
+              {...register("servings", { valueAsNumber: true })}
+            />
+            {errors.servings && (
+              <p className="form-error">{errors.servings.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="difficulty">Difficulté</label>
+            <select
+              id="difficulty"
+              className="mt-1 w-full"
+              {...register("difficulty")}
+            >
+              <option value="beginner">Débutant</option>
+              <option value="intermediate">Intermédiaire</option>
+              <option value="advanced">Avancé</option>
+            </select>
+            {errors.difficulty && (
+              <p className="form-error">{errors.difficulty.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="status">Statut</label>
+            <select
+              id="status"
+              className="mt-1 w-full"
+              {...register("status")}
+            >
+              <option value="draft">Brouillon</option>
+              <option value="scheduled">Programmé</option>
+              <option value="published">Publié</option>
+            </select>
+            {errors.status && (
+              <p className="form-error">{errors.status.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="publish_at">Publication programmée</label>
+            <input
+              id="publish_at"
+              type="datetime-local"
+              className="mt-1 w-full"
+              {...register("publish_at")}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Optionnel. Utilisé si le statut est{" "}
+              <span className="font-semibold">programmé</span>.
+            </p>
           </div>
 
           <div className="md:col-span-2">
@@ -249,9 +399,113 @@ const NewRecipePage = () => {
               <p className="form-error">{errors.tags.message as string}</p>
             )}
           </div>
+        </div>
+
+        {/* Bloc texte détaillé */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label htmlFor="ingredients_text">Ingrédients (une ligne par ingrédient)</label>
+            <textarea
+              id="ingredients_text"
+              rows={6}
+              className="mt-1 w-full font-mono text-xs"
+              placeholder={"200 g farine\n100 g beurre\n3 pommes…"}
+              {...register("ingredients_text")}
+            />
+            {errors.ingredients_text && (
+              <p className="form-error">{errors.ingredients_text.message}</p>
+            )}
+          </div>
 
           <div className="md:col-span-2">
-            <label htmlFor="image_url">Image URL (optionnel)</label>
+            <label htmlFor="instructions_detailed">Instructions détaillées</label>
+            <textarea
+              id="instructions_detailed"
+              rows={8}
+              className="mt-1 w-full"
+              placeholder="Détaillez les étapes complètes de la recette…"
+              {...register("instructions_detailed")}
+            />
+            {errors.instructions_detailed && (
+              <p className="form-error">
+                {errors.instructions_detailed.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="chef_tips">Astuces du chef</label>
+            <textarea
+              id="chef_tips"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Conseils pratiques, astuces de cuisson…"
+              {...register("chef_tips")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="cultural_history">Histoire / contexte culturel</label>
+            <textarea
+              id="cultural_history"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Origine de la recette, contexte culturel…"
+              {...register("cultural_history")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="techniques">Techniques mises en avant</label>
+            <textarea
+              id="techniques"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Techniques de cuisine importantes pour cette recette…"
+              {...register("techniques")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="source_info">Source / crédits</label>
+            <textarea
+              id="source_info"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Livre, chef, blog, inspiration…"
+              {...register("source_info")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="difficulty_detailed">
+              Détails sur la difficulté
+            </label>
+            <textarea
+              id="difficulty_detailed"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Pièges, points critiques, erreurs fréquentes…"
+              {...register("difficulty_detailed")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="nutritional_notes">Notes nutritionnelles</label>
+            <textarea
+              id="nutritional_notes"
+              rows={4}
+              className="mt-1 w-full"
+              placeholder="Informations nutritionnelles, recommandations…"
+              {...register("nutritional_notes")}
+            />
+          </div>
+        </div>
+
+        {/* Bloc image */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="image_url">Image URL</label>
             <input
               id="image_url"
               type="url"
@@ -264,7 +518,7 @@ const NewRecipePage = () => {
             )}
           </div>
 
-          <div className="md:col-span-2">
+          <div>
             <label htmlFor="image_file">Image (upload)</label>
             <input
               id="image_file"
@@ -281,6 +535,59 @@ const NewRecipePage = () => {
               fichier. En cas d&apos;upload, le fichier sera stocké dans
               Supabase Storage avec un nom basé sur le titre de la recette.
             </p>
+          </div>
+        </div>
+
+        {/* Bloc SEO */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="meta_title">Titre SEO</label>
+            <input
+              id="meta_title"
+              type="text"
+              className="mt-1 w-full"
+              placeholder="Titre optimisé pour Google (50-60 caractères)"
+              {...register("meta_title")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="meta_description">Description Meta</label>
+            <textarea
+              id="meta_description"
+              rows={3}
+              className="mt-1 w-full"
+              placeholder="Description pour les résultats Google (150-160 caractères)"
+              {...register("meta_description")}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="canonical_url">URL canonique</label>
+            <input
+              id="canonical_url"
+              type="url"
+              className="mt-1 w-full"
+              placeholder="https://monsite.com/recettes/..."
+              {...register("canonical_url")}
+            />
+            {errors.canonical_url && (
+              <p className="form-error">{errors.canonical_url.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="og_image_url">Image Open Graph</label>
+            <input
+              id="og_image_url"
+              type="url"
+              className="mt-1 w-full"
+              placeholder="https://monsite.com/images/recette.jpg"
+              {...register("og_image_url")}
+            />
+            {errors.og_image_url && (
+              <p className="form-error">{errors.og_image_url.message}</p>
+            )}
           </div>
         </div>
 
