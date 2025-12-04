@@ -26,6 +26,22 @@ interface RecipeIngredientsEditorProps {
   recipeId: string;
 }
 
+const COMMON_UNITS: string[] = [
+  "g",
+  "kg",
+  "mg",
+  "ml",
+  "cl",
+  "l",
+  "c.à.c",
+  "c.à.s",
+  "pincée",
+  "unité",
+  "tranche",
+  "cube",
+  "bouquet"
+];
+
 interface DbRow {
   id: string;
   ingredient_catalog_id: string;
@@ -347,6 +363,7 @@ export const RecipeIngredientsEditor: React.FC<
                   <td className="px-3 py-2 align-top">
                     <input
                       type="text"
+                      list="ingredient-unit-options"
                       className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
                       value={row.unit}
                       onChange={(e) =>
@@ -399,6 +416,11 @@ export const RecipeIngredientsEditor: React.FC<
             )}
           </tbody>
         </table>
+        <datalist id="ingredient-unit-options">
+          {COMMON_UNITS.map((unit) => (
+            <option key={unit} value={unit} />
+          ))}
+        </datalist>
       </div>
     </div>
   );

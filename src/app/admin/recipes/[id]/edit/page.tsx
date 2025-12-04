@@ -32,8 +32,51 @@ const fetchRecipeById = async (id: string) => {
   return data;
 };
 
+const fetchRecipeCategories = async (): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("category", { distinct: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as { category: string | null }[]) ?? [];
+  const values = rows
+    .map((r) => r.category)
+    .filter((c): c is string => !!c && c.trim() !== "");
+
+  return values.sort();
+};
+
+const fetchRecipeCuisines = async (): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("cuisine", { distinct: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as { cuisine: string | null }[]) ?? [];
+  const values = rows
+    .map((r) => r.cuisine)
+    .filter((c): c is string => !!c && c.trim() !== "");
+
+  return values.sort();
+};
+
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
+
+const difficultyTemplates: Record<string, string> = {
+  beginner:
+    "Recette accessible aux débutants, avec peu d'étapes techniques. Le principal enjeu est de respecter les temps et les températures de cuisson.",
+  intermediate:
+    "Recette de difficulté intermédiaire, qui nécessite une bonne maîtrise des bases (préparation, cuisson, organisation) et un minimum de rigueur.",
+  advanced:
+    "Recette exigeante, avec plusieurs étapes techniques et une gestion fine des textures, des temps de repos et des températures."
+};
 
 const getPremiumMissing = (recipe: any): string[] => {
   const missing: string[] = [];
@@ -102,6 +145,8 @@ const AdminEditRecipePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
@@ -178,6 +223,50 @@ const AdminEditRecipePage = () => {
     enabled: !!id
   });
 
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ["recipes-categories-all"],
+    queryFn: fetchRecipeCategories
+  });
+
+  const { data: allCuisines = [] } = useQuery({
+    queryKey: ["recipes-cuisines-all"],
+    queryFn: fetchRecipeCuisines
+  });
+
+  const { data: ingredientsCount = 0 } = useQuery({
+    queryKey: ["recipe-ingredients-count", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("recipe_ingredients_normalized")
+        .select("id", { count: "exact", head: true })
+        .eq("recipe_id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      return count ?? 0;
+    },
+    enabled: !!id
+  });
+
+  const { data: stepsCount = 0 } = useQuery({
+    queryKey: ["recipe-steps-count", id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("recipe_steps_enhanced")
+        .select("id", { count: "exact", head: true })
+        .eq("recipe_id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      return count ?? 0;
+    },
+    enabled: !!id
+  });
+
   useEffect(() => {
     if (recipe) {
       reset({
@@ -211,6 +300,69 @@ const AdminEditRecipePage = () => {
       });
     }
   }, [recipe, reset]);
+
+  const watchedTitle = watch("title");
+  const watchedDescription = watch("description");
+  const watchedSlug = watch("slug");
+  const watchedImageUrl = watch("image_url");
+  const watchedDifficulty = watch("difficulty");
+  const watchedMetaTitle = watch("meta_title");
+  const watchedMetaDescription = watch("meta_description");
+  const watchedCanonicalUrl = watch("canonical_url");
+  const watchedOgImageUrl = watch("og_image_url");
+  const watchedDifficultyDetailed = watch("difficulty_detailed");
+
+  useEffect(() => {
+    if (watchedTitle && !isNonEmpty(watchedMetaTitle)) {
+      setValue("meta_title", `Recette de ${watchedTitle}`, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedTitle, watchedMetaTitle, setValue]);
+
+  useEffect(() => {
+    if (watchedDescription && !isNonEmpty(watchedMetaDescription)) {
+      const base = watchedDescription.trim();
+      const truncated =
+        base.length > 160 ? `${base.slice(0, 157).trimEnd()}…` : base;
+      if (truncated) {
+        setValue("meta_description", truncated, {
+          shouldDirty: true
+        });
+      }
+    }
+  }, [watchedDescription, watchedMetaDescription, setValue]);
+
+  useEffect(() => {
+    if (watchedSlug && !isNonEmpty(watchedCanonicalUrl)) {
+      setValue("canonical_url", `/recettes/${watchedSlug}`, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedSlug, watchedCanonicalUrl, setValue]);
+
+  useEffect(() => {
+    if (watchedImageUrl && !isNonEmpty(watchedOgImageUrl)) {
+      setValue("og_image_url", watchedImageUrl, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedImageUrl, watchedOgImageUrl, setValue]);
+
+  useEffect(() => {
+    if (!watchedDifficulty) return;
+    if (isNonEmpty(watchedDifficultyDetailed)) return;
+    const template = difficultyTemplates[watchedDifficulty];
+    if (template) {
+      setValue("difficulty_detailed", template, {
+        shouldDirty: true
+      });
+    }
+  }, [
+    watchedDifficulty,
+    watchedDifficultyDetailed,
+    setValue
+  ]);
 
   const onSubmit = async (values: RecipeFormValues) => {
     if (!id) return;
@@ -402,6 +554,10 @@ const AdminEditRecipePage = () => {
   const conceptsCount = recipeConcepts?.length ?? 0;
   const audioUsageCount = recipeAudioUsage?.length ?? 0;
   const embeddingPresent = !!recipe.embedding;
+  const ingredientsPresent = ingredientsCount > 0;
+  const stepsPresent = stepsCount > 0;
+  const seoComplete =
+    isNonEmpty(recipe.meta_title) && isNonEmpty(recipe.meta_description);
 
   return (
     <div className="space-y-6">
@@ -525,6 +681,62 @@ const AdminEditRecipePage = () => {
               </Button>
             </div>
           </div>
+
+          <div className="mt-4 border-t border-slate-800 pt-3 text-xs">
+            <p className="font-semibold text-slate-200">
+              Checklist RAG (structure)
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <span
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  ingredientsPresent
+                    ? "bg-emerald-500/10 text-emerald-300"
+                    : "bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                Ingrédients normalisés :{" "}
+                {ingredientsPresent
+                  ? `${ingredientsCount} ligne(s)`
+                  : "⚠️ aucun ingrédient normalisé"}
+              </span>
+              <span
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  stepsPresent
+                    ? "bg-emerald-500/10 text-emerald-300"
+                    : "bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                Étapes enrichies :{" "}
+                {stepsPresent
+                  ? `${stepsCount} étape(s)`
+                  : "⚠️ aucune étape enrichie"}
+              </span>
+              <span
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  conceptsCount > 0
+                    ? "bg-emerald-500/10 text-emerald-300"
+                    : "bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                Concepts liés :{" "}
+                {conceptsCount > 0
+                  ? `${conceptsCount} concept(s)`
+                  : "⚠️ aucun concept scientifique"}
+              </span>
+              <span
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  seoComplete
+                    ? "bg-emerald-500/10 text-emerald-300"
+                    : "bg-amber-500/10 text-amber-200"
+                }`}
+              >
+                SEO :{" "}
+                {seoComplete
+                  ? "Titre + description remplis"
+                  : "⚠️ Titre ou description SEO manquant(e)"}
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -572,6 +784,7 @@ const AdminEditRecipePage = () => {
               <input
                 id="category"
                 type="text"
+                list="recipe-categories-options"
                 className="mt-1 w-full"
                 placeholder="dessert, plat principal…"
                 {...register("category")}
@@ -586,6 +799,7 @@ const AdminEditRecipePage = () => {
               <input
                 id="cuisine"
                 type="text"
+                list="recipe-cuisines-options"
                 className="mt-1 w-full"
                 placeholder="française, italienne, japonaise…"
                 {...register("cuisine")}
@@ -609,6 +823,16 @@ const AdminEditRecipePage = () => {
               )}
             </div>
           </div>
+          <datalist id="recipe-categories-options">
+            {allCategories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <datalist id="recipe-cuisines-options">
+            {allCuisines.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </section>
 
         {/* Onglet 2 : Durée, portions, statut */}
