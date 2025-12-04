@@ -1413,5 +1413,3 @@ const AdminEditRecipePage = () => {
 };
 
 export default AdminEditRecipePage;
-
-export default AdminEditRecipePage;
