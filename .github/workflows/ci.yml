@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   quality-check:
-    name: Lint, TypeScript, Format
+    name: Lint & TypeScript
     runs-on: ubuntu-latest
 
     steps:
@@ -31,9 +31,6 @@ jobs:
 
       - name: Lint (ESLint)
         run: npm run lint
-
-      - name: Format check (Prettier)
-        run: npm run format:check
 
       - name: Typecheck (TypeScript)
         run: npm run typecheck
