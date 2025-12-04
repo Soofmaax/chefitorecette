@@ -662,8 +662,7 @@ const AdminEditRecipePage = () => {
   ]);
 
   const jsonLdString = useMemo(
-    () =>
-      jsonLdObject ? JSON.stringify(jsonLdObject, null, 2) : "// JSON-LD généré à partir du formulaire",
+    () => (jsonLdObject ? JSON.stringify(jsonLdObject, null, 2) : ""),
     [jsonLdObject]
   );
 
