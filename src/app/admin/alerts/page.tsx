@@ -172,10 +172,12 @@ const AdminAlertsPage = () => {
 
   const pendingCount = alerts?.length ?? 0;
 
-  const sortedAlerts = useMemo(
-    () => (alerts ?? []).slice().sort((a, b) => b.similarity_score - a.similarity_score),
-    [alerts]
-  );
+  const sortedAlerts = useMemo(() => {
+    if (!alerts) return [];
+    return alerts
+      .slice()
+      .sort((a, b) => b.similarity_score - a.similarity_score);
+  }, [alerts]);
 
   if (isError) {
     return (

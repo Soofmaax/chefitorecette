@@ -141,9 +141,7 @@ const computeMissingFields = (recipe: AdminRecipe): string[] => {
 
 const fetchRecipes = async (
   params: RecipesQueryParams
-): Promise<RecipesQueryResult> => {ecipes = async (
-  params: RecipesQueryParams
-): Promis<<RecipesQueryResult> => {
+): Promise<RecipesQueryResult> => {
   const {
     page,
     perPage,
@@ -342,7 +340,7 @@ const AdminRecipesPage = () => {
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
 
-  // Reset page when filtres ou recherche changent
+  // Reset page when filtres, recherche ou filtre RAG changent
   useEffect(() => {
     setPage(1);
   }, [
@@ -351,7 +349,8 @@ const AdminRecipesPage = () => {
     categoryFilter,
     cuisineFilter,
     search,
-    slugOrId
+    slugOrId,
+    ragFilter
   ]);
 
   const {

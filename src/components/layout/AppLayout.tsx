@@ -88,7 +88,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="text-sm font-semibold tracking-tight text-slate-100">
-              Interface d'administration RAG
+              Interface d’administration RAG
             </h1>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
