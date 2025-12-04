@@ -89,18 +89,45 @@ const NewArticlePage = () => {
 
       const enrichmentResponse = enrichmentData as any;
 
-      // 4. Mise à jour du statut et des métadonnées S3/cache
+      // La fonction renvoie :
+      // {
+      //   success: true,
+      //   postId,
+      //   embedding: { dimensions, magnitude },
+      //   enrichmentData: { content_text, key_concepts, enrichment_status, rag_metadata }
+      // }
+      // ou { error, message }
+      if (!enrichmentResponse?.success) {
+        const message =
+          enrichmentResponse?.error ??
+          enrichmentResponse?.message ??
+          "Échec de l’enrichissement RAG.";
+        throw new Error(message);
+      }
+
+      const enrichment = enrichmentResponse.enrichmentData ?? {};
+
+      // 4. Mise à jour du contenu enrichi et des métadonnées de cache
+      const updatePayload: any = {
+        cache_key: cacheKey,
+        enrichment_status: enrichment.enrichment_status ?? "completed",
+        published_at:
+          values.status === "published"
+            ? new Date().toISOString()
+            : null
+      };
+
+      if (enrichment.content_text) {
+        updatePayload.content_text = enrichment.content_text;
+      }
+      if (enrichment.key_concepts) {
+        // Mapping vers la colonne key_points
+        updatePayload.key_points = enrichment.key_concepts;
+      }
+
       const { error: updateError } = await supabase
         .from("posts")
-        .update({
-          s3_vector_key: enrichmentResponse?.s3Key ?? null,
-          cache_key: cacheKey,
-          enrichment_status: enrichmentResponse?.success ? "completed" : "failed",
-          published_at:
-            values.status === "published"
-              ? new Date().toISOString()
-              : null
-        })
+        .update(updatePayload)
         .eq("id", article.id);
 
       if (updateError) {
@@ -108,7 +135,7 @@ const NewArticlePage = () => {
       }
 
       setMessage(
-        "Article créé et enrichissement RAG déclenché (embedding, S3, cache Redis)."
+        "Article créé et enrichissement RAG déclenché (texte enrichi, embedding, cache Redis)."
       );
       reset({
         title: "",

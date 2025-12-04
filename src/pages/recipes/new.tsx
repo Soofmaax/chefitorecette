@@ -65,7 +65,7 @@ const NewRecipePage = () => {
         throw error;
       }
 
-      // 2. Déclencher la génération d’embedding + stockage S3
+      // 2. Déclencher la génération d’embedding (Edge Function)
       const { data: embeddingData, error: embeddingError } =
         await supabase.functions.invoke("generate-recipe-embedding", {
           body: { recipe_id: recipe.id, recipe_data: values }
@@ -77,12 +77,22 @@ const NewRecipePage = () => {
 
       const embeddingResponse = embeddingData as any;
 
-      // 3. Mise à jour du statut dans la table recipes
+      // La fonction renvoie :
+      // { success: true, recipe_id, embedding_dim, message } ou { error }
+      if (!embeddingResponse?.success) {
+        const message =
+          embeddingResponse?.error ??
+          embeddingResponse?.message ??
+          "Échec de la génération de l’embedding.";
+        throw new Error(message);
+      }
+
+      // 3. Mise à jour éventuelle du statut dans la table recipes
+      // (le backend peut aussi gérer ce champ côté DB, ici on confirme côté UI)
       const { error: updateError } = await supabase
         .from("recipes")
         .update({
-          s3_vector_key: embeddingResponse?.s3Key ?? null,
-          embedding_status: embeddingResponse?.success ? "completed" : "failed"
+          embedding_status: "completed"
         })
         .eq("id", recipe.id);
 
@@ -94,12 +104,13 @@ const NewRecipePage = () => {
       const cacheKey = `recipe:${recipe.id}`;
       await cacheContentInRedis(cacheKey, {
         ...recipe,
-        embeddingGenerated: embeddingResponse?.success ?? false,
-        s3Stored: Boolean(embeddingResponse?.s3Key)
+        embeddingGenerated: true,
+        embedding_dim: embeddingResponse.embedding_dim,
+        message: embeddingResponse.message
       });
 
       setMessage(
-        "Recette créée, embedding généré et stocké (S3), cache Redis mis à jour."
+        "Recette créée, embedding généré (Edge Function) et cache Redis mis à jour."
       );
       reset({
         title: "",
