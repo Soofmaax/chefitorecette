@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEditor";
 import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
+import { RecipeConceptsEditor } from "@/components/admin/RecipeConceptsEditor";
 
 const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
@@ -1197,6 +1198,13 @@ const AdminEditRecipePage = () => {
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
           <RecipeStepsEditor recipeId={id} />
+        </section>
+      )}
+
+      {/* Onglet 7 : Concepts scientifiques */}
+      {id && (
+        <section className="card mt-4 space-y-4 px-5 py-5">
+          <RecipeConceptsEditor recipeId={id} />
         </section>
       )}
     </div>
