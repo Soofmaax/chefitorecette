@@ -85,10 +85,6 @@ const getPremiumMissing = (recipe: any): string[] => {
     missing.push("Astuces ou détails difficulté");
   }
 
-  if (!recipe.embedding) {
-    missing.push("Embedding RAG");
-  }
-
   return missing;
 };
 

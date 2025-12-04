@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
@@ -34,9 +34,9 @@ interface AdminRecipe {
 
 type StatusFilter = "all" | "draft" | "scheduled" | "published";
 
-interface RecipeQueryParams {
+interface RecipesQueryParams {
   page: number;
-  pageSize: number;
+  perPage: number;
   statusFilter: StatusFilter;
   difficultyFilter: string;
   categoryFilter: string;
@@ -44,80 +44,18 @@ interface RecipeQueryParams {
   search: string;
 }
 
-interface RecipeQueryResult {
+interface RecipesQueryResult {
   items: AdminRecipe[];
   total: number;
-  withEmbeddingCount: number;
 }
 
-const fetchRecipes = async (params: RecipeQueryParams): Promise<RecipeQueryResult> => {
-  const {
-    page,
-    pageSize,
-    statusFilter,
-    difficultyFilter,
-    categoryFilter,
-    cuisineFilter,
-    search
-  } = params;
+interface CategoryRow {
+  category: string | null;
+}
 
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = supabase
-    .from("recipes")
-    .select(
-      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding",
-      { count: "exact" }
-    )
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (statusFilter !== "all") {
-    query = query.eq("status", statusFilter);
-  }
-
-  if (difficultyFilter !== "all") {
-    query = query.eq("difficulty", difficultyFilter);
-  }
-
-  if (categoryFilter !== "all") {
-    query = query.eq("category", categoryFilter);
-  }
-
-  if (cuisineFilter !== "all") {
-    query = query.eq("cuisine", cuisineFilter);
-  }
-
-  if (search.trim()) {
-    const term = `%${search.trim()}%`;
-    query = query.or(
-      [
-        `title.ilike.${term}`,
-        `slug.ilike.${term}`,
-        `category.ilike.${term}`,
-        `cuisine.ilike.${term}`,
-        `ingredients_text.ilike.${term}`,
-        `instructions_detailed.ilike.${term}`
-      ].join(",")
-    );
-  }
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    throw error;
-  }
-
-  const items = ((data as AdminRecipe[]) ?? []).filter((r) => !!r.id);
-  const withEmbeddingCount = items.filter((r) => r.embedding != null).length;
-
-  return {
-    items,
-    total: count ?? 0,
-    withEmbeddingCount
-  };
-};
+interface CuisineRow {
+  cuisine: string | null;
+}
 
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
@@ -172,10 +110,6 @@ const getPremiumMissing = (recipe: AdminRecipe): string[] => {
     missing.push("Astuces ou détails difficulté");
   }
 
-  if (!recipe.embedding) {
-    missing.push("Embedding RAG");
-  }
-
   return missing;
 };
 
@@ -187,20 +121,155 @@ const computeMissingFields = (recipe: AdminRecipe): string[] => {
   return getPremiumMissing(recipe);
 };
 
+const fetchRecipes = async (
+  params: RecipesQueryParams
+): Promise<RecipesQueryResult> => {
+  const {
+    page,
+    perPage,
+    statusFilter,
+    difficultyFilter,
+    categoryFilter,
+    cuisineFilter,
+    search
+  } = params;
+
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  let query = supabase
+    .from("recipes")
+    .select(
+      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding",
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  if (difficultyFilter !== "all") {
+    query = query.eq("difficulty", difficultyFilter);
+  }
+
+  if (categoryFilter !== "all") {
+    query = query.eq("category", categoryFilter);
+  }
+
+  if (cuisineFilter !== "all") {
+    query = query.eq("cuisine", cuisineFilter);
+  }
+
+  if (search.trim()) {
+    const needle = `%${search.trim()}%`;
+    query = query.or(
+      [
+        `title.ilike.${needle}`,
+        `slug.ilike.${needle}`,
+        `category.ilike.${needle}`,
+        `cuisine.ilike.${needle}`,
+        `ingredients_text.ilike.${needle}`,
+        `instructions_detailed.ilike.${needle}`
+      ].join(",")
+    );
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    items: ((data as AdminRecipe[]) ?? []).filter((r) => !!r.id),
+    total: count ?? 0
+  };
+};
+
+const fetchCategories = async (): Promise<string[]> => {
+  const { data, error } = await supabase.from("recipes").select("category");
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as CategoryRow[]) ?? [];
+  const values = rows
+    .map((r) => r.category)
+    .filter((c): c is string => !!c && c.trim() !== "");
+
+  return Array.from(new Set(values)).sort();
+};
+
+const fetchCuisines = async (): Promise<string[]> => {
+  const { data, error } = await supabase.from("recipes").select("cuisine");
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as CuisineRow[]) ?? [];
+  const values = rows
+    .map((r) => r.cuisine)
+    .filter((c): c is string => !!c && c.trim() !== "");
+
+  return Array.from(new Set(values)).sort();
+};
+
 const AdminRecipesPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [cuisineFilter, setCuisineFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState<number>(1);
+  const perPage = 50;
+
+  // Reset page when filters changent
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, difficultyFilter, categoryFilter, cuisineFilter, search]);
 
   const {
-    data: recipes,
+    data,
     isLoading,
     isError
-  } = useQuery<AdminRecipe[]>({
-    queryKey: ["admin-recipes"],
-    queryFn: fetchRecipes
+  } = useQuery<RecipesQueryResult>({
+    queryKey: [
+      "admin-recipes",
+      {
+        page,
+        perPage,
+        statusFilter,
+        difficultyFilter,
+        categoryFilter,
+        cuisineFilter,
+        search
+      }
+    ],
+    queryFn: () =>
+      fetchRecipes({
+        page,
+        perPage,
+        statusFilter,
+        difficultyFilter,
+        categoryFilter,
+        cuisineFilter,
+        search
+      }),
+    keepPreviousData: true
+  });
+
+  const { data: categories = [] } = useQuery<string[]>({
+    queryKey: ["admin-recipes-categories"],
+    queryFn: fetchCategories
+  });
+
+  const { data: cuisines = [] } = useQuery<string[]>({
+    queryKey: ["admin-recipes-cuisines"],
+    queryFn: fetchCuisines
   });
 
   const embeddingMutation = useMutation({
@@ -209,93 +278,9 @@ const AdminRecipesPage = () => {
     }
   });
 
-  const categories = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (recipes ?? [])
-            .map((r) => r.category)
-            .filter((c): c is string => !!c && c.trim() !== "")
-        )
-      ).sort(),
-    [recipes]
-  );
-
-  const cuisines = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (recipes ?? [])
-            .map((r) => r.cuisine)
-            .filter((c): c is string => !!c && c.trim() !== "")
-        )
-      ).sort(),
-    [recipes]
-  );
-
-  const filteredRecipes = useMemo(() => {
-    if (!recipes) return [];
-
-    return recipes.filter((recipe) => {
-      if (
-        statusFilter !== "all" &&
-        recipe.status &&
-        recipe.status !== statusFilter
-      ) {
-        return false;
-      }
-
-      if (
-        difficultyFilter !== "all" &&
-        recipe.difficulty &&
-        recipe.difficulty !== difficultyFilter
-      ) {
-        return false;
-      }
-
-      if (
-        categoryFilter !== "all" &&
-        recipe.category &&
-        recipe.category !== categoryFilter
-      ) {
-        return false;
-      }
-
-      if (
-        cuisineFilter !== "all" &&
-        recipe.cuisine &&
-        recipe.cuisine !== cuisineFilter
-      ) {
-        return false;
-      }
-
-      if (search.trim()) {
-        const needle = search.trim().toLowerCase();
-        const haystack = `${recipe.title ?? ""} ${
-          recipe.slug ?? ""
-        } ${recipe.category ?? ""} ${recipe.cuisine ?? ""} ${
-          recipe.ingredients_text ?? ""
-        } ${recipe.instructions_detailed ?? ""}`.toLowerCase();
-
-        if (!haystack.includes(needle)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [
-    recipes,
-    statusFilter,
-    difficultyFilter,
-    categoryFilter,
-    cuisineFilter,
-    search
-  ]);
-
-  const total = recipes?.length ?? 0;
-  const withEmbeddingCount =
-    recipes?.filter((r) => r.embedding != null).length ?? 0;
+  const recipes = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
 
   if (isError) {
     return (
@@ -318,7 +303,7 @@ const AdminRecipesPage = () => {
           </p>
           {total > 0 && (
             <p className="mt-1 text-xs text-slate-500">
-              {withEmbeddingCount} / {total} recettes avec embedding
+              {recipes.length} recette(s) sur cette page (sur {total} au total)
             </p>
           )}
         </div>
@@ -385,10 +370,35 @@ const AdminRecipesPage = () => {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="border-b border-slate-800 px-4 py-3 text-xs text-slate-400">
-          {isLoading
-            ? "Chargement des recettes…"
-            : `${filteredRecipes.length} recettes affichées (sur ${total})`}
+        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-xs text-slate-400">
+          <div>
+            {isLoading
+              ? "Chargement des recettes…"
+              : `${recipes.length} recette(s) sur cette page (sur ${total} au total)`}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || isLoading}
+            >
+              ◀ Page précédente
+            </button>
+            <span className="text-[11px] text-slate-400">
+              Page {page} / {totalPages || 1}
+            </span>
+            <button
+              type="button"
+              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 disabled:opacity-40"
+              onClick={() =>
+                setPage((p) => (p < totalPages ? p + 1 : p))
+              }
+              disabled={page >= totalPages || isLoading || total === 0}
+            >
+              Page suivante ▶
+            </button>
+          </div>
         </div>
 
         <div className="max-h-[560px] overflow-auto text-sm">
@@ -415,7 +425,7 @@ const AdminRecipesPage = () => {
                     Chargement…
                   </td>
                 </tr>
-              ) : filteredRecipes.length === 0 ? (
+              ) : recipes.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -425,7 +435,7 @@ const AdminRecipesPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRecipes.map((recipe) => {
+                recipes.map((recipe) => {
                   const missing = computeMissingFields(recipe);
                   const enriched = isEnrichedPremium(recipe);
 
