@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { articleSchema, ArticleFormValues } from "@/types/forms";
-import { supabase, getCurrentUser } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 import { generateSlug } from "@/lib/slug";
 import { extractTextFromHTML } from "@/lib/text";
 import { cacheContentInRedis } from "@/lib/integrations";
@@ -10,7 +12,11 @@ import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
-const NewArticlePage = () => {
+const EditArticlePage = () => {
+  const router = useRouter();
+  const { id } = router.query;
+
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -35,16 +41,65 @@ const NewArticlePage = () => {
     }
   });
 
+  useEffect(() => {
+    const fetchArticle = async (articleId: string) => {
+      setLoading(true);
+      setErrorMessage(null);
+      setMessage(null);
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select(
+          "id, slug, title, excerpt, content_html, cover_image_url, tags, category, status, published_at, cache_key, content_text, rag_metadata"
+        )
+        .eq("id", articleId)
+        .single();
+
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error(error);
+        setErrorMessage(
+          "Erreur lors du chargement de l’article. Veuillez réessayer."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        setErrorMessage("Article introuvable.");
+        setLoading(false);
+        return;
+      }
+
+      reset({
+        title: data.title ?? "",
+        slug: data.slug ?? "",
+        excerpt: data.excerpt ?? "",
+        content_html: data.content_html ?? "",
+        status: (data.status as ArticleFormValues["status"]) ?? "draft",
+        category: data.category ?? "",
+        tags: (data.tags as string[]) ?? [],
+        cover_image_url: data.cover_image_url ?? "",
+        publish_at: data.published_at
+          ? new Date(data.published_at).toISOString().slice(0, 16)
+          : ""
+      });
+
+      setLoading(false);
+    };
+
+    if (typeof id === "string") {
+      fetchArticle(id);
+    }
+  }, [id, reset]);
+
   const onSubmit = async (values: ArticleFormValues) => {
+    if (typeof id !== "string") return;
+
     setMessage(null);
     setErrorMessage(null);
 
     try {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error("Utilisateur non connecté");
-      }
-
       // Slug : utiliser celui fourni ou le générer depuis le titre
       const slug =
         (values.slug && values.slug.trim()) || generateSlug(values.title);
@@ -58,7 +113,6 @@ const NewArticlePage = () => {
         }
       }
 
-      // 1. Insertion dans la table posts
       const payload = {
         slug,
         title: values.title,
@@ -69,14 +123,13 @@ const NewArticlePage = () => {
         category: values.category,
         status: values.status,
         published_at:
-          values.status === "published" ? publishAtIso ?? new Date().toISOString() : null,
-        author_id: user.id,
-        enrichment_status: "pending"
+          values.status === "published" ? publishAtIso ?? new Date().toISOString() : null
       };
 
-      const { data: article, error } = await supabase
+      const { data: updated, error } = await supabase
         .from("posts")
-        .insert([payload])
+        .update(payload)
+        .eq("id", id)
         .select()
         .single();
 
@@ -84,100 +137,92 @@ const NewArticlePage = () => {
         throw error;
       }
 
-      // 2. Cache Redis du contenu textuel pour accès rapide
+      // Recalculer et mettre à jour le cache Redis de base (texte brut)
       const contentForCache = {
-        id: article.id,
-        title: article.title,
-        excerpt: article.excerpt,
-        content_text: extractTextFromHTML(article.content_html),
-        tags: article.tags,
-        category: article.category,
-        created_at: article.created_at
+        id: updated.id,
+        title: updated.title,
+        excerpt: updated.excerpt,
+        content_text: extractTextFromHTML(updated.content_html),
+        tags: updated.tags,
+        category: updated.category,
+        created_at: updated.created_at
       };
-
-      const cacheKey = `content:${article.id}`;
-      await cacheContentInRedis(cacheKey, contentForCache);
-
-      // 3. Déclenchement de l'enrichissement (Edge Function RAG)
-      const { data: enrichmentData, error: enrichmentError } =
-        await supabase.functions.invoke("generate-post-embedding", {
-          body: { post_id: article.id, post_data: values }
-        });
-
-      if (enrichmentError) {
-        throw enrichmentError;
-      }
-
-      const enrichmentResponse = enrichmentData as any;
-
-      if (!enrichmentResponse?.success) {
-        const msg =
-          enrichmentResponse?.error ??
-          enrichmentResponse?.message ??
-          "Échec de l’enrichissement RAG.";
-        throw new Error(msg);
-      }
-
-      const enrichment = enrichmentResponse.enrichmentData ?? {};
-
-      // 4. Mise à jour du contenu enrichi et des métadonnées de cache
-      const updatePayload: any = {
-        cache_key: cacheKey,
-        content_text: enrichment.content_text,
-        key_points: enrichment.key_concepts,
-        enrichment_status: enrichment.enrichment_status ?? "completed",
-        rag_metadata: enrichment.rag_metadata
-      };
-
-      if (values.status === "published") {
-        updatePayload.published_at =
-          publishAtIso ?? new Date().toISOString();
-      }
-
-      const { error: updateError } = await supabase
-        .from("posts")
-        .update(updatePayload)
-        .eq("id", article.id);
-
-      if (updateError) {
-        throw updateError;
+      const cacheKey = `content:${updated.id}`;
+      try {
+        await cacheContentInRedis(cacheKey, contentForCache);
+        await supabase
+          .from("posts")
+          .update({ cache_key: cacheKey })
+          .eq("id", updated.id);
+      } catch {
+        // on ne bloque pas l'édition si le cache échoue
       }
 
       setMessage(
-        "Article créé et enrichissement RAG déclenché (texte enrichi, embedding, cache Redis)."
+        "Article mis à jour avec succès. Relancez l’enrichissement RAG depuis la liste si nécessaire."
       );
-      reset({
-        title: "",
-        slug: "",
-        excerpt: "",
-        content_html: "",
-        status: "draft",
-        category: "",
-        tags: [],
-        cover_image_url: "",
-        publish_at: ""
-      });
       // eslint-disable-next-line no-console
-      console.log("Article créé :", article, enrichmentResponse);
+      console.log("Article mis à jour :", updated);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
       setErrorMessage(
-        err?.message ?? "Erreur lors de la création de l’article."
+        err?.message ?? "Erreur lors de la mise à jour de l’article."
       );
     }
   };
 
+  const handleDelete = async () => {
+    if (typeof id !== "string") return;
+
+    // eslint-disable-next-line no-alert
+    const confirm = window.confirm(
+      "Voulez-vous vraiment supprimer cet article ? Cette action est irréversible."
+    );
+    if (!confirm) return;
+
+    try {
+      const { error } = await supabase.from("posts").delete().eq("id", id);
+      if (error) {
+        throw error;
+      }
+      router.push("/articles");
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setErrorMessage(
+        err?.message ?? "Erreur lors de la suppression de l’article."
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoadingSpinner className="mr-2" />
+        <span className="text-sm text-slate-400">
+          Chargement de l’article…
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-          Nouvel article
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Créez un article éditorial qui alimentera le système RAG (texte,
-          points clés, métadonnées).
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-50">
+            Éditer l’article
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Modifiez le contenu éditorial qui alimente le système RAG.
+          </p>
+        </div>
+        <Link href="/articles" legacyBehavior>
+          <a>
+            <Button variant="secondary">Retour à la liste</Button>
+          </a>
+        </Link>
       </div>
 
       <form
@@ -209,7 +254,8 @@ const NewArticlePage = () => {
               {...register("slug")}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Laissez vide pour générer automatiquement depuis le titre.
+              Utilisé pour l’URL publique. Laissez vide pour régénérer depuis le
+              titre.
             </p>
           </div>
 
@@ -319,27 +365,38 @@ const NewArticlePage = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2"
-          >
-            {isSubmitting && (
-              <LoadingSpinner size="sm" className="text-slate-100" />
-            )}
-            <span>Enregistrer l’article</span>
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2"
+            >
+              {isSubmitting && (
+                <LoadingSpinner size="sm" className="text-slate-100" />
+              )}
+              <span>Mettre à jour l’article</span>
+            </Button>
 
-          {message && <p className="text-xs text-emerald-300">{message}</p>}
-          {errorMessage && (
-            <p className="text-xs text-red-300">{errorMessage}</p>
-          )}
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2 text-xs text-red-300 hover:text-red-200"
+              onClick={handleDelete}
+            >
+              Supprimer
+            </Button>
+          </div>
+
+          <div className="flex flex-col items-end gap-1 text-xs">
+            {message && <p className="text-emerald-300">{message}</p>}
+            {errorMessage && <p className="text-red-300">{errorMessage}</p>}
+          </div>
         </div>
       </form>
     </div>
   );
 };
 
-export default NewArticlePage;
+export default EditArticlePage;

@@ -8,7 +8,10 @@ import { triggerEmbedding } from "@/lib/embeddings";
 interface Article {
   id: string;
   title: string;
+  slug: string;
+  status: string;
   created_at: string;
+  published_at: string | null;
   enrichment_status: string | null;
   cache_key?: string | null;
   rag_metadata?: {
@@ -33,7 +36,7 @@ const ArticlesListPage = () => {
       const { data, error } = await supabase
         .from("posts")
         .select(
-          "id, title, created_at, enrichment_status, cache_key, rag_metadata"
+          "id, title, slug, status, created_at, published_at, enrichment_status, cache_key, rag_metadata"
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -194,7 +197,9 @@ const ArticlesListPage = () => {
             <thead className="bg-slate-900/80 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-2 text-left">Titre</th>
+                <th className="px-4 py-2 text-left">Statut</th>
                 <th className="px-4 py-2 text-left">Créé le</th>
+                <th className="px-4 py-2 text-left">Publié le</th>
                 <th className="px-4 py-2 text-left">Statut RAG</th>
                 <th className="px-4 py-2 text-left">Cache</th>
                 <th className="px-4 py-2 text-left">Embedding</th>
@@ -236,13 +241,26 @@ const ArticlesListPage = () => {
                   return (
                     <tr key={article.id}>
                       <td className="px-4 py-2 align-top">
-                        <span className="font-medium text-slate-100">
-                          {article.title}
-                        </span>
+                        <Link href={`/articles/${article.id}`} legacyBehavior>
+                          <a className="font-medium text-slate-100 hover:underline">
+                            {article.title}
+                          </a>
+                        </Link>
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          {article.slug}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 align-top text-slate-400">
+                        {article.status}
                       </td>
                       <td className="px-4 py-2 align-top text-slate-400">
                         {article.created_at
                           ? new Date(article.created_at).toLocaleString()
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-2 align-top text-slate-400">
+                        {article.published_at
+                          ? new Date(article.published_at).toLocaleString()
                           : "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-slate-400">
