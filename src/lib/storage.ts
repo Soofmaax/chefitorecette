@@ -5,15 +5,15 @@ const RECIPE_IMAGES_BUCKET = "recipe-images";
 
 /**
  * Uploads a recipe image to Supabase Storage and returns its public URL.
- * The file is stored under: recipes/&lt;slug&gt;/&lt;slug&gt;-&lt;timestamp&gt;.&lt;ext&gt;
+ * The file is stored under: recipes/<slug>/<slug>-<timestamp>.<ext>
  */
 export const uploadRecipeImage = async (
   file: File,
   recipeTitle: string
-): Promise<string> =&gt; {
+): Promise<string> => {
   const slug = generateSlug(recipeTitle || "recette");
   const extension =
-    file.name.split(".").length &gt; 1 ? file.name.split(".").pop() : "jpg";
+    file.name.split(".").length > 1 ? file.name.split(".").pop() : "jpg";
   const timestamp = Date.now();
   const path = `recipes/${slug}/${slug}-${timestamp}.${extension}`;
 

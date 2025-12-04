@@ -8,12 +8,14 @@ import { triggerEmbedding } from "@/lib/embeddings";
 interface Recipe {
   id: string;
   title: string;
-  created_at: string;
-  embedding_status: string | null;
-  s3_vector_key?: string | null;
+  slug: string;
+  status: string;
+  created_at: string | null;
+  publish_at: string | null;
+  embedding: unknown | null;
 }
 
-type FilterStatus = "all" | "completed" | "pending" | "failed";
+type FilterStatus = "all" | "withEmbedding" | "withoutEmbedding";
 
 const RecipesListPage = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -26,7 +28,9 @@ const RecipesListPage = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("recipes")
-        .select("id, title, created_at, embedding_status, s3_vector_key")
+        .select(
+          "id, title, slug, status, created_at, publish_at, embedding"
+        )
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -55,24 +59,24 @@ const RecipesListPage = () => {
     }
   };
 
-  const statusLabel = (status: string | null) => {
+  const statusLabel = (status: string) => {
     switch (status) {
-      case "completed":
+      case "draft":
         return (
-          <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
-            Enrichie
+          <span className="rounded bg-slate-700/40 px-2 py-0.5 text-xs text-slate-200">
+            Brouillon
           </span>
         );
-      case "pending":
+      case "scheduled":
         return (
           <span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-200">
-            En attente
+            Programmé
           </span>
         );
-      case "failed":
+      case "published":
         return (
-          <span className="rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-200">
-            Échec
+          <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+            Publié
           </span>
         );
       default:
@@ -84,21 +88,32 @@ const RecipesListPage = () => {
     }
   };
 
+  const embeddingLabel = (embedding: unknown | null) => {
+    if (embedding) {
+      return (
+        <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+          Présent
+        </span>
+      );
+    }
+    return (
+      <span className="rounded bg-slate-700/40 px-2 py-0.5 text-xs text-slate-300">
+        Manquant
+      </span>
+    );
+  };
+
   const filteredRecipes = useMemo(() => {
     if (filter === "all") return recipes;
-    return recipes.filter((r) => r.embedding_status === filter);
+    if (filter === "withEmbedding") {
+      return recipes.filter((r) => r.embedding);
+    }
+    return recipes.filter((r) => !r.embedding);
   }, [recipes, filter]);
 
   const total = recipes.length;
-  const completedCount = recipes.filter(
-    (r) => r.embedding_status === "completed"
-  ).length;
-  const pendingCount = recipes.filter(
-    (r) => r.embedding_status === "pending"
-  ).length;
-  const failedCount = recipes.filter(
-    (r) => r.embedding_status === "failed"
-  ).length;
+  const withEmbeddingCount = recipes.filter((r) => r.embedding).length;
+  const withoutEmbeddingCount = recipes.filter((r) => !r.embedding).length;
 
   return (
     <div className="space-y-6">
@@ -108,13 +123,12 @@ const RecipesListPage = () => {
             Recettes RAG
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Suivi des recettes enrichies via le système RAG (embeddings +
-            stockage S3).
+            Suivi des recettes éditoriales qui alimentent votre système RAG.
           </p>
           {total > 0 && (
             <p className="mt-1 text-xs text-slate-500">
-              {completedCount} / {total} recettes enrichies • {pendingCount} en
-              attente • {failedCount} en échec
+              {withEmbeddingCount} / {total} recettes avec embedding •{" "}
+              {withoutEmbeddingCount} sans embedding
             </p>
           )}
         </div>
@@ -134,36 +148,25 @@ const RecipesListPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => setFilter("completed")}
+              onClick={() => setFilter("withEmbedding")}
               className={`px-3 py-1.5 ${
-                filter === "completed"
+                filter === "withEmbedding"
                   ? "bg-primary-600 text-white"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
-              Enrichies
+              Avec embedding
             </button>
             <button
               type="button"
-              onClick={() => setFilter("pending")}
+              onClick={() => setFilter("withoutEmbedding")}
               className={`px-3 py-1.5 ${
-                filter === "pending"
+                filter === "withoutEmbedding"
                   ? "bg-primary-600 text-white"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
-              En attente
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter("failed")}
-              className={`px-3 py-1.5 ${
-                filter === "failed"
-                  ? "bg-primary-600 text-white"
-                  : "text-slate-300 hover:bg-slate-800"
-              }`}
-            >
-              Échec
+              Sans embedding
             </button>
           </div>
 
@@ -187,9 +190,10 @@ const RecipesListPage = () => {
             <thead className="bg-slate-900/80 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-2 text-left">Titre</th>
+                <th className="px-4 py-2 text-left">Statut</th>
                 <th className="px-4 py-2 text-left">Créée le</th>
-                <th className="px-4 py-2 text-left">Statut embedding</th>
-                <th className="px-4 py-2 text-left">Vecteur S3</th>
+                <th className="px-4 py-2 text-left">Publication</th>
+                <th className="px-4 py-2 text-left">Embedding</th>
                 <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
@@ -197,7 +201,7 @@ const RecipesListPage = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-6 text-center text-slate-400"
                   >
                     <LoadingSpinner className="mr-2 inline-block" />
@@ -207,7 +211,7 @@ const RecipesListPage = () => {
               ) : filteredRecipes.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-6 text-center text-slate-500"
                   >
                     Aucune recette trouvée pour ce filtre.
@@ -217,9 +221,17 @@ const RecipesListPage = () => {
                 filteredRecipes.map((recipe) => (
                   <tr key={recipe.id}>
                     <td className="px-4 py-2 align-top">
-                      <span className="font-medium text-slate-100">
-                        {recipe.title}
-                      </span>
+                      <Link href={`/recipes/${recipe.id}`} legacyBehavior>
+                        <a className="font-medium text-slate-100 hover:underline">
+                          {recipe.title}
+                        </a>
+                      </Link>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {recipe.slug}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 align-top text-slate-400">
+                      {statusLabel(recipe.status)}
                     </td>
                     <td className="px-4 py-2 align-top text-slate-400">
                       {recipe.created_at
@@ -227,18 +239,12 @@ const RecipesListPage = () => {
                         : "—"}
                     </td>
                     <td className="px-4 py-2 align-top text-slate-400">
-                      {statusLabel(recipe.embedding_status)}
+                      {recipe.publish_at
+                        ? new Date(recipe.publish_at).toLocaleString()
+                        : "—"}
                     </td>
                     <td className="px-4 py-2 align-top text-slate-400">
-                      {recipe.s3_vector_key ? (
-                        <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
-                          {recipe.s3_vector_key}
-                        </span>
-                      ) : (
-                        <span className="rounded bg-slate-700/40 px-2 py-0.5 text-xs text-slate-300">
-                          Non stockée dans S3
-                        </span>
-                      )}
+                      {embeddingLabel(recipe.embedding)}
                     </td>
                     <td className="px-4 py-2 align-top text-right">
                       <Button
