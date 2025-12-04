@@ -444,3 +444,174 @@ En pratique, le backoffice te permet aujourd’hui :
 
 Cette doc reflète l’état fonctionnel actuel du projet.  
 Tu peux t’y référer pour continuer à enrichir l’admin (par exemple : CRUD complet sur `knowledge_base`, workflows de travail `work_progress`, analytics audio plus poussés, etc.).
+
+---
+
+## 6. Architecture – vue d’ensemble
+
+### 6.1. Diagramme logique (texte)
+
+```text
+[Client Web (Next 15)]
+   |
+   |  (Auth, appels React Query)
+   v
+[Supabase auth] -----> [user_profiles / profiles]
+   |
+   |  (clients Supabase)
+   v
+[Supabase Postgres]
+   |   \
+   |    \-- tables recettes : recipes, recipe_ingredients_normalized,
+   |         recipe_steps_enhanced, recipe_concepts, recipe_embeddings...
+   |
+   |-- [knowledge_base] (concepts scientifiques)
+   |-- [ingredients_catalog] + [recipe_ingredients_normalized]
+   |-- [audio_library] + [audio_mapping] + [audio_usage_stats]
+   |-- [recipe_similarity_alerts] + [recipe_relationships]
+   |
+   |-- Edge functions :
+        - generate-recipe-embedding
+        - generate-post-embedding
+        - redis-wrapper
+        - s3-vectors-wrapper
+        - vault-wrapper
+```
+
+### 6.2. Clients Supabase
+
+- **Client navigateur** (`supabaseClient`) :
+  - Utilise `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+  - Sert à toutes les opérations côté client sécurisées par RLS (lecture, updates simples).
+- **Client admin serveur** (`supabaseAdmin`) :
+  - Utilise `SUPABASE_SERVICE_ROLE_KEY`.
+  - Uniquement dans les routes `/app/api/*` (ex. fusion de recettes).
+  - Permet des opérations globales (migration de données entre recettes), tout en vérifiant côté route que l’utilisateur connecté a bien le rôle admin.
+
+---
+
+## 7. Guide de prise en main en 5 minutes (par rôle)
+
+### 7.1. Rédacteur / éditorial
+
+Objectif : enrichir des recettes pour les passer au niveau “premium”.
+
+1. **Se connecter**
+   - Aller sur `/auth/sign-in`.
+   - Se connecter avec un compte ayant accès à l’admin (rôle `editor` ou `admin` selon tes règles).
+
+2. **Lister les recettes**
+   - Menu : **Recettes** → `/admin/recipes`.
+   - Utiliser les filtres (statut, difficulté, catégorie, cuisine) pour trouver une recette.
+   - Repérer les badges :
+     - ✅ `enrichie` = recette premium.
+     - ⚠️ `à enrichir` = encore du travail.
+
+3. **Ouvrir une recette à compléter**
+   - Cliquer sur le titre pour ouvrir `/admin/recipes/[id]/edit`.
+   - En haut, regarder le panneau “Statut premium & actions rapides” :
+     - S’il y a des badges rouges, ce sont les critères manquants.
+
+4. **Compléter les contenus**
+   - Renseigner/compléter :
+     - `description`, `ingredients_text`, `instructions_detailed`.
+     - `cultural_history`, `techniques`, `nutritional_notes`.
+     - `chef_tips` ou `difficulty_detailed`.
+     - SEO : `meta_title`, `meta_description`.
+   - Mettre à jour l’image si besoin (`image_url` ou upload).
+
+5. **Enregistrer & vérifier**
+   - Cliquer sur “Mettre à jour la recette”.
+   - Regarder à nouveau le panneau “Statut premium” :
+     - Si tous les critères sont remplis, la recette passe en “recette premium”.
+   - Si besoin, demander à un admin de déclencher l’embedding (ou utiliser le bouton si accessible).
+
+---
+
+### 7.2. Admin produit / chef de projet
+
+Objectif : piloter la qualité globale et la cohérence du catalogue.
+
+1. **Surveiller les métriques globales**
+   - Aller sur `/admin/dashboard`.
+   - Vérifier :
+     - Nombre de recettes, articles, utilisateurs.
+     - Intégrations RAG (Redis, S3, Vault).
+
+2. **Suivre l’enrichissement des recettes**
+   - `/admin/recipes` :
+     - Utiliser les filtres pour voir :
+       - Recettes publiées mais pas encore premium.
+       - Recettes par catégorie/cuisine/difficulté.
+     - Prioriser les recettes avec beaucoup de champs manquants.
+
+3. **Gérer les doublons**
+   - `/admin/alerts` :
+     - Voir les alertes de similarité.
+     - Pour chaque alerte :
+       - Marquer parent/enfant quand il s’agit de variantes.
+       - Rejeter les faux positifs.
+       - Utiliser la fusion pour éliminer les doublons et centraliser les stats.
+
+4. **Maintenir les ingrédients et la base de connaissances**
+   - `/admin/ingredients` :
+     - Ajouter des ingrédients manquants.
+     - Harmoniser les noms (display vs canonical).
+   - `/admin/knowledge` :
+     - Vérifier les concepts importants.
+     - S’assurer que les recettes importants ont des concepts associés.
+
+5. **Piloter la partie audio**
+   - `/admin/audio` :
+     - Vérifier quels audios existent (intros, concepts, actions).
+     - Créer des mappings pour associer les bons audios aux bons concepts ou ingrédients.
+     - Vérifier l’usage audio par recette depuis le panneau d’édition.
+
+---
+
+### 7.3. Data / ML / intégrations
+
+Objectif : utiliser le backoffice comme point de contrôle et d’observation des données pour RAG, embedding, audio, etc.
+
+1. **Vérifier l’état des embeddings**
+   - `/admin/recipes` :
+     - Colonnes “Embedding” et “Qualité”.
+     - Identifier les recettes sans embedding ou non premium.
+   - `/admin/recipes/[id]/edit` :
+     - Utiliser le bouton “Générer / recalculer l’embedding” pour forcer un refresh.
+   - Vérifier les Edge functions (`generate-recipe-embedding`, `redis-wrapper`, `s3-vectors-wrapper`, `vault-wrapper`).
+
+2. **Observer la qualité des données structurées**
+   - `recipe_ingredients_normalized` :
+     - Via `/admin/recipes/[id]/edit` → bloc “Ingrédients structurés”.
+     - Vérifier que les ingrédients sont bien liés au catalogue (`ingredients_catalog`).
+   - `recipe_steps_enhanced` :
+     - Vérifier que les étapes contiennent du texte riche exploitable pour les embeddings.
+
+3. **Utiliser la knowledge base**
+   - `/admin/knowledge` :
+     - Voir quels concepts sont prêts (`work_status = 'ready' / 'published'`).
+     - Vérifier les liens `recipe_concepts` avec les recettes clés.
+
+4. **Suivre et enrichir l’audio**
+   - `/admin/audio` :
+     - Vérifier l’exhaustivité de `audio_library`.
+     - Créer de nouveaux audios (upload) pour les concepts importants.
+     - Mapper les audios avec `audio_mapping` pour les ingrédients, concepts, actions.
+   - Depuis `/admin/recipes/[id]/edit` :
+     - Consulter le nombre d’usages audio (`audio_usage_stats`) pour chaque recette.
+
+5. **Travailler sur les similitudes et la cohérence du catalogue**
+   - `/admin/alerts` :
+     - Utiliser les alertes de similarité comme feedback sur la qualité des embeddings.
+     - Après fusion, vérifier que les tables liées (`recipe_embeddings`, `audio_usage_stats`, etc.) pointent vers la recette canonique.
+
+---
+
+Avec ces sections supplémentaires (architecture + guides par rôle), tu as une vue complète pour ne pas te perdre :
+
+- **Quoi fait quoi** (architecture + tables).
+- **Qui fait quoi** (rédacteur, admin, data).
+- **Où cliquer** dans le backoffice pour chaque type de tâche.
+
+Si tu veux, on peut ensuite ajouter une mini “checklist de mise en prod” (variables d’environnement, buckets storage, politiques RLS) pour fermer la boucle.
