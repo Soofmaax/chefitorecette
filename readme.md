@@ -9,6 +9,16 @@ Ce projet combine :
 
 ---
 
+## Sommaire
+
+- [1. Stack & architecture](#1-stack--architecture)
+- [2. Définition d’une “recette premium”](#2-définition-dune-recette-premium)
+- [3. Fonctionnalités de l’admin premium](#3-fonctionnalités-de-ladmin-premium)
+  - [3.1. Dashboard admin](#31-dashboard-admin)
+  - [3.2. Gestion des recettes – Mode premium](#32-gestion-des-recettes--mode-premium)
+  - [3.3. Alertes de similarité & gestion des doublons](#33-alertes-de-similarité--gestion-des-doublons)
+  - [3.4. Bibliothèque d’ingrédients](#34-bibliothèque-dingrédients---
+
 ## 1. Stack & architecture
 
 ### 1.1. Technologies
