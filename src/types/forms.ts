@@ -66,6 +66,80 @@ export const recipeSchema = z.object({
     .string()
     .url("URL d’image Open Graph invalide")
     .optional()
+    .or(z.literal("")),
+
+  // Indicateur pour activer / désactiver l'inclusion du JSON-LD Schema.org
+  schema_jsonld_enabled: z.boolean().default(false)
+});
+
+export type RecipeFormValues = z.infer<typeof recipeSchema>;ort { z } from "zod";
+
+/**
+ * Schéma de recette aligné sur la table public.recipes
+ */
+export const recipeSchema = z.object({
+  title: z.string().min(3, "Titre trop court"),
+  slug: z.string().optional(),
+  description: z.string().min(10, "Description trop courte"),
+
+  image_url: z
+    .string()
+    .url("URL invalide")
+    .optional()
+    .or(z.literal("")),
+
+  prep_time_min: z.coerce
+    .number()
+    .int()
+    .min(0, "Temps de préparation invalide"),
+  cook_time_min: z.coerce
+    .number()
+    .int()
+    .min(0, "Temps de cuisson invalide"),
+  servings: z.coerce
+    .number()
+    .int()
+    .min(1, "Nombre de portions invalide"),
+
+  difficulty: z.enum(["beginner", "intermediate", "advanced"], {
+    required_error: "Difficulté requise"
+  }),
+  category: z.string().min(1, "Catégorie requise"),
+  cuisine: z.string().min(1, "Cuisine requise"),
+
+  tags: z.array(z.string()).default([]),
+
+  status: z.enum(["draft", "scheduled", "published"]).default("draft"),
+  publish_at: z
+    .string()
+    .optional()
+    .or(z.literal("")),
+
+  ingredients_text: z
+    .string()
+    .min(1, "Liste d’ingrédients requise"),
+  instructions_detailed: z
+    .string()
+    .min(1, "Instructions détaillées requises"),
+
+  chef_tips: z.string().optional().or(z.literal("")),
+  cultural_history: z.string().optional().or(z.literal("")),
+  techniques: z.string().optional().or(z.literal("")),
+  source_info: z.string().optional().or(z.literal("")),
+  difficulty_detailed: z.string().optional().or(z.literal("")),
+  nutritional_notes: z.string().optional().or(z.literal("")),
+
+  meta_title: z.string().optional().or(z.literal("")),
+  meta_description: z.string().optional().or(z.literal("")),
+  canonical_url: z
+    .string()
+    .url("URL canonique invalide")
+    .optional()
+    .or(z.literal("")),
+  og_image_url: z
+    .string()
+    .url("URL d’image Open Graph invalide")
+    .optional()
     .or(z.literal(""))
 });
 

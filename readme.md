@@ -24,6 +24,8 @@ Ce projet combine :
   - [3.5. Knowledge base (concepts scientifiques)](#35-knowledge-base-concepts-scientifiques)
   - [3.6. Concepts scientifiques liés à une recette](#36-concepts-scientifiques-liés-à-une-recette)
   - [3.7. Gestion audio](#37-gestion-audio)
+  - [3.8. Calendrier éditorial & import CSV](#38-calendrier-éditorial--import-csv)
+  - [3.9. SEO avancé & JSON-LD Recipe](#39-seo-avancé--json-ld-recipe)
 - [4. Partie historique : back-office HTML minimal](#4-partie-historique--back-office-html-minimal)
 - [5. Résumé opérationnel](#5-résumé-opérationnel)
 - [6. Architecture – vue d’ensemble](#6-architecture--vue-densemble)
@@ -482,6 +484,9 @@ Données :
 
 - Upload d’un fichier `audio/*` via `uploadAudioFile` (bucket `audio-files`) :
   - Chemin : `audio/<audioKey>/<audioKey>-<timestamp>.<ext>`
+  - Validation côté client :
+    - type MIME doit commencer par `audio/`,
+    - taille maximale : **20 Mo** (au-delà, l’upload est refusé avec un message explicite).
 - Création automatique d’une entrée `audio_library` avec :
   - `audio_key`, `audio_url`
   - `audio_type`, `language`, `voice_style`, `quality_tier`
@@ -506,6 +511,128 @@ Données :
   - Le panneau d’actions rapides affiche le nombre d’usages audio liés à la recette.
 
 ---
+
+### 3.8. Calendrier éditorial & import CSV
+
+#### `/admin/editorial-calendar`
+
+Données :
+
+- Table : `editorial_calendar` (voir `sql/editorial_calendar.sql`).
+- Colonnes principales :
+  - `title`, `category`, `difficulty`, `target_month`,
+  - `status` (`planned`, `draft`, `enriching`, `published`),
+  - `priority`,
+  - `tags` (array texte),
+  - `chefito_angle`,
+  - `recipe_id` (lien optionnel vers `recipes.id`).
+
+Fonctionnalités :
+
+- Vue **tableau** :
+  - Liste jusqu’à 250 entrées éditoriales.
+  - Filtres : statut, catégorie, difficulté, mois cible, priorité.
+  - Recherche plein texte sur titre, catégorie, angle, tags.
+  - Modification directe du `status` et de `priority` via des `<select>`.
+  - Colonne “Actions” :
+    - Si `recipe_id` est défini : bouton **“Voir la recette”** → `/admin/recipes/[id]/edit`.
+    - Sinon : bouton **“Créer la recette”** → `/admin/recipes/create?editorialId=<id>`.
+
+- Vue **Kanban** :
+  - Colonnes : `Planned` → `Draft` → `Enriching` → `Published`.
+  - Chaque carte affiche titre, mois cible, catégorie, difficulté, tags, priorité.
+  - Liens de navigation identiques (voir / créer la recette associée).
+
+- Statistiques rapides :
+  - Compteur `X/Y publiées` et pourcentage (`published / total`) en en‑tête.
+
+#### `/admin/editorial-calendar/import`
+
+- Page dédiée à l’**import CSV éditorial**.
+- Fonctionnement :
+  1. Upload d’un fichier `.csv` (séparateur `,` ou `;` autodétecté).
+  2. Parsing en mémoire et détection des en‑têtes.
+  3. **Mapping automatique** des colonnes CSV vers les champs internes :
+     - `title`, `category`, `difficulty`, `target_month`, `status`,
+       `priority`, `tags`, `chefito_angle`.
+  4. UI de mapping permettant de corriger manuellement les correspondances.
+  5. Prévisualisation des 10 premières lignes converties dans le format
+     `editorial_calendar` avec affichage des erreurs par ligne
+     (titre manquant, mois invalide, difficulté invalide, priorité incorrecte…).
+  6. Bouton “Importer” :
+     - n’insère que les lignes **valides**,
+     - ignore les lignes en erreur (un message le rappelle).
+
+- Normalisation :
+  - `difficulty` : accepte les valeurs FR/EN (`débutant`, `intermediate`, `advanced`…),
+    mappées vers `beginner` / `intermediate` / `advanced`.
+  - `status` : mappage simple (`draft`, `enriching`, `published`, sinon `planned`).
+  - `target_month` : formats acceptés :
+    - `YYYY-MM`, `YYYY/MM`, `YYYY-MM-DD`, `DD/MM/YYYY` → convertis en `YYYY-MM-01`.
+  - `tags` : séparés par virgule.
+
+---
+
+### 3.9. SEO avancé & JSON-LD Recipe
+
+#### JSON-LD généré dans l’éditeur de recette
+
+Fichiers :
+
+- `src/lib/seo.ts`
+- `src/app/admin/recipes/[id]/edit/page.tsx`
+
+Fonctionnalités :
+
+- Génération automatique d’un objet **Schema.org `Recipe` en JSON-LD** à partir des champs du formulaire :
+  - `name` : titre de la recette,
+  - `description` : `meta_description` si remplie, sinon `description`,
+  - `image` : URL d’image,
+  - `recipeCategory` / `recipeCuisine`,
+  - `keywords` (tags),
+  - `recipeYield` (portions),
+  - `prepTime`, `cookTime`, `totalTime` (en format ISO 8601 `PTxxM`),
+  - `recipeIngredient` (lignes de `ingredients_text`),
+  - `recipeInstructions` (liste de `HowToStep` à partir des lignes de `instructions_detailed`).
+
+- Un flag `schema_jsonld_enabled` est stocké dans la table `recipes`
+  (voir `sql/recipes_schema_jsonld.sql`) et éditable dans l’UI :
+  - permet au front de décider d’inclure ou non ce bloc JSON-LD sur la page publique.
+
+- L’éditeur affiche :
+  - un panneau “SEO avancé – Schema.org Recipe (JSON-LD)”,
+  - le JSON généré en lecture seule (`<pre>` formaté),
+  - une validation minimale (présence de `name`, `description`, `image`,
+    `recipeIngredient`, `recipeInstructions`) avec messages lisibles.
+
+#### Validation pre-publish bloquante
+
+Sur `/admin/recipes/[id]/edit` :
+
+- Avant d’autoriser le passage au statut `published`, le formulaire vérifie :
+
+  - Présence d’une **image** (URL existante ou fichier upload sélectionné).
+  - `description` non vide.
+  - `ingredients_text` non vide.
+  - `instructions_detailed` non vide.
+  - `cultural_history` non vide.
+  - `techniques` non vide.
+  - `nutritional_notes` non vide.
+  - `meta_title` non vide.
+  - `meta_description` non vide.
+  - au moins un des deux : `chef_tips` ou `difficulty_detailed`.
+  - au moins **3** lignes dans `recipe_ingredients_normalized`.
+  - au moins **3** lignes dans `recipe_steps_enhanced`.
+  - au moins **1** concept scientifique dans `recipe_concepts`.
+
+- Si un de ces critères manque :
+  - la mise à jour est bloquée,
+  - une modale liste précisément les éléments manquants,
+  - un message d’erreur explicite est affiché sous le formulaire.
+
+Ces règles alignent le statut `published` sur la définition de “recette premium”
+et garantissent une couverture éditoriale et structurelle minimale avant
+publication.
 
 ## 4. Partie historique : back-office HTML minimal
 

@@ -85,6 +85,7 @@ const AdminAudioPage = () => {
   const [mappingConceptKey, setMappingConceptKey] = useState("");
   const [mappingContentType, setMappingContentType] = useState("ingredient");
   const [mappingAudioId, setMappingAudioId] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -119,7 +120,15 @@ const AdminAudioPage = () => {
       setFile(null);
       setAudioKey("");
       setVoiceStyle("");
+      setUploadError(null);
       queryClient.invalidateQueries({ queryKey: ["audio-library"] });
+    },
+    onError: (err: any) => {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setUploadError(
+        err?.message ?? "Erreur lors de l'upload du fichier audio."
+      );
     }
   });
 
@@ -260,7 +269,7 @@ const AdminAudioPage = () => {
             />
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-1">
           <Button
             type="button"
             variant="primary"
@@ -273,6 +282,9 @@ const AdminAudioPage = () => {
             )}
             <span>Uploader et créer l&apos;entrée audio</span>
           </Button>
+          {uploadError && (
+            <p className="text-[11px] text-red-300">{uploadError}</p>
+          )}
         </div>
       </div>
 

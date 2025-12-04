@@ -8,6 +8,58 @@ const bodySchema = z.object({
   alertId: z.string().uuid().optional()
 });
 
+async function requireAdmin(
+  req: NextRequest
+): Promise<{ ok: true; userId: string } | { ok: false; response: NextResponse }> {
+  const authHeader = req.headers.get("authorization") ?? "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+
+  if (!match) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Authentification requise pour fusionner des recettes." },
+        { status: 401 }
+      )
+    };
+  }
+
+  const token = match[1];
+
+  const {
+    data: { user },
+    error: userError
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (userError || !user) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Jeton d'authentification invalide ou expiré." },
+        { status: 401 }
+      )
+    };
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || profile?.role !== "admin") {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Seuls les administrateurs peuvent fusionner des recettes." },
+        { status: 403 }
+      )
+    };
+  }
+
+  return { ok: true, userId: user.id };
+}
+
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
 
@@ -17,6 +69,11 @@ export async function POST(req: NextRequest) {
       { error: "Requête invalide", details: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  const adminCheck = await requireAdmin(req);
+  if (!adminCheck.ok) {
+    return adminCheck.response;
   }
 
   const { canonicalId, duplicateId, alertId } = parsed.data;

@@ -28,7 +28,7 @@ interface AlertWithRecipes extends SimilarityAlert {
   similarRecipe?: Recipe;
 }
 
-const fetchAlertsWithRecipes = async (): Promise<AlertWithRecipes[]> => {
+const fetchAlertsWithRecipes = async (): Promise&lt;AlertWithRecipes[]> => {
   const { data: alerts, error } = await supabase
     .from("recipe_similarity_alerts")
     .select(
@@ -62,7 +62,7 @@ const fetchAlertsWithRecipes = async (): Promise<AlertWithRecipes[]> => {
     throw recipesError;
   }
 
-  const recipeMap = new Map<string, Recipe>();
+  const recipeMap = new Map&lt;string, Recipe>();
   (recipes as Recipe[]).forEach((r) => {
     recipeMap.set(r.id, r);
   });
@@ -81,7 +81,7 @@ const AdminAlertsPage = () => {
     data: alerts,
     isLoading,
     isError
-  } = useQuery<AlertWithRecipes[]>({
+  } = useQuery&lt;AlertWithRecipes[]>({
     queryKey: ["similarity-alerts"],
     queryFn: fetchAlertsWithRecipes
   });
@@ -150,10 +150,23 @@ const AdminAlertsPage = () => {
       canonicalId: string;
       duplicateId: string;
     }) => {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error(
+          "Session invalide ou expirée. Veuillez vous reconnecter."
+        );
+      }
+
       const res = await fetch("/api/recipes/merge", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
         },
         body: JSON.stringify(params)
       });
@@ -181,29 +194,29 @@ const AdminAlertsPage = () => {
 
   if (isError) {
     return (
-      <p className="text-sm text-red-300">
+      &lt;p className="text-sm text-red-300">
         Impossible de charger les alertes de similarité.
-      </p>
+      &lt;/p>
     );
   }
 
   const renderAlerts = () => {
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center py-10">
-          <LoadingSpinner />
-          <span className="ml-2 text-sm text-slate-400">
+        &lt;div className="flex items-center justify-center py-10">
+          &lt;LoadingSpinner />
+          &lt;span className="ml-2 text-sm text-slate-400">
             Chargement des alertes…
-          </span>
-        </div>
+          &lt;/span>
+        &lt;/div>
       );
     }
 
     if (!sortedAlerts.length) {
       return (
-        <p className="text-sm text-slate-400">
+        &lt;p className="text-sm text-slate-400">
           Aucune alerte de similarité en attente. Tout est à jour.
-        </p>
+        &lt;/p>
       );
     }
 
@@ -212,78 +225,78 @@ const AdminAlertsPage = () => {
       const similarRecipe = alert.similarRecipe;
 
       return (
-        <div
+        &lt;div
           key={alert.id}
           className="card flex flex-col gap-4 px-4 py-4 md:flex-row"
         >
-          <div className="flex-1 space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>
+          &lt;div className="flex-1 space-y-3">
+            &lt;div className="flex items-center justify-between text-xs text-slate-400">
+              &lt;span>
                 Score de similarité :{" "}
-                <span className="font-semibold text-slate-100">
+                &lt;span className="font-semibold text-slate-100">
                   {alert.similarity_score.toFixed(3)}
-                </span>
-              </span>
-              <span>
+                &lt;/span>
+              &lt;/span>
+              &lt;span>
                 Créée le{" "}
                 {alert.created_at
                   ? new Date(alert.created_at).toLocaleString()
                   : "—"}
-              </span>
-            </div>
+              &lt;/span>
+            &lt;/div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+            &lt;div className="grid gap-4 md:grid-cols-2">
+              &lt;div>
+                &lt;h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
                   Nouvelle recette
-                </h2>
+                &lt;/h2>
                 {newRecipe ? (
-                  <div className="space-y-1">
-                    <Link
+                  &lt;div className="space-y-1">
+                    &lt;Link
                       href={`/admin/recipes/${newRecipe.id}/edit`}
                       className="text-sm font-medium text-slate-100 hover:underline"
                     >
                       {newRecipe.title}
-                    </Link>
-                    <p className="text-xs text-slate-500">
+                    &lt;/Link>
+                    &lt;p className="text-xs text-slate-500">
                       {newRecipe.slug}
-                    </p>
-                  </div>
+                    &lt;/p>
+                  &lt;/div>
                 ) : (
-                  <p className="text-xs text-slate-500">
+                  &lt;p className="text-xs text-slate-500">
                     Recette introuvable.
-                  </p>
+                  &lt;/p>
                 )}
-              </div>
+              &lt;/div>
 
-              <div>
-                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+              &lt;div>
+                &lt;h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
                   Recette similaire
-                </h2>
+                &lt;/h2>
                 {similarRecipe ? (
-                  <div className="space-y-1">
-                    <Link
+                  &lt;div className="space-y-1">
+                    &lt;Link
                       href={`/admin/recipes/${similarRecipe.id}/edit`}
                       className="text-sm font-medium text-slate-100 hover:underline"
                     >
                       {similarRecipe.title}
-                    </Link>
-                    <p className="text-xs text-slate-500">
+                    &lt;/Link>
+                    &lt;p className="text-xs text-slate-500">
                       {similarRecipe.slug}
-                    </p>
-                  </div>
+                    &lt;/p>
+                  &lt;/div>
                 ) : (
-                  <p className="text-xs text-slate-500">
+                  &lt;p className="text-xs text-slate-500">
                     Recette introuvable.
-                  </p>
+                  &lt;/p>
                 )}
-              </div>
-            </div>
-          </div>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
 
-          <div className="flex w-full flex-col justify-between gap-3 md:w-64">
-            <div className="flex flex-col gap-2">
-              <Button
+          &lt;div className="flex w-full flex-col justify-between gap-3 md:w-64">
+            &lt;div className="flex flex-col gap-2">
+              &lt;Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -304,9 +317,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Marquer : nouvelle = variante de la recette existante
-              </Button>
+              &lt;/Button>
 
-              <Button
+              &lt;Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -327,9 +340,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Marquer : existante = variante de la nouvelle
-              </Button>
+              &lt;/Button>
 
-              <Button
+              &lt;Button
                 type="button"
                 variant="secondary"
                 className="text-xs text-red-300 hover:text-red-200"
@@ -341,9 +354,9 @@ const AdminAlertsPage = () => {
                 onClick={() => resolveAsDifferent.mutate(alert.id)}
               >
                 Marquer comme différentes (rejeter)
-              </Button>
+              &lt;/Button>
 
-              <Button
+              &lt;Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -362,9 +375,9 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Fusionner (garder la recette existante)
-              </Button>
+              &lt;/Button>
 
-              <Button
+              &lt;Button
                 type="button"
                 variant="secondary"
                 className="text-xs"
@@ -383,33 +396,33 @@ const AdminAlertsPage = () => {
                 }}
               >
                 Fusionner (garder la nouvelle)
-              </Button>
-            </div>
-          </div>
-        </div>
+              &lt;/Button>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
       );
     });
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-50">
+    &lt;div className="space-y-6">
+      &lt;div>
+        &lt;h1 className="text-xl font-semibold tracking-tight text-slate-50">
           Alertes de similarité de recettes
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        &lt;/h1>
+        &lt;p className="mt-1 text-sm text-slate-400">
           Comparez les recettes détectées comme similaires, marquez les
           variantes parent/enfant ou rejetez les faux positifs.
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
+        &lt;/p>
+        &lt;p className="mt-1 text-xs text-slate-500">
           {isLoading
             ? "Chargement des alertes…"
             : `${pendingCount} alerte(s) en attente ou en cours de revue.`}
-        </p>
-      </div>
+        &lt;/p>
+      &lt;/div>
 
-      <div className="space-y-3">{renderAlerts()}</div>
-    </div>
+      &lt;div className="space-y-3">{renderAlerts()}&lt;/div>
+    &lt;/div>
   );
 };
 

@@ -10,6 +10,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
 import { triggerEmbedding } from "@/lib/embeddings";
+import { buildRecipeJsonLd, validateRecipeJsonLd } from "@/lib/seo";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -21,7 +22,7 @@ const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding"
+      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
     )
     .eq("id", id)
     .single();
@@ -145,7 +146,7 @@ const AdminEditRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm<RecipeFormValues>({
+  } = useForm&lt;RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
@@ -172,7 +173,8 @@ const AdminEditRecipePage = () => {
       meta_title: "",
       meta_description: "",
       canonical_url: "",
-      og_image_url: ""
+      og_image_url: "",
+      schema_jsonld_enabled: false
     }
   });
 
@@ -184,8 +186,7 @@ const AdminEditRecipePage = () => {
     queryKey: ["admin-recipe", id],
     queryFn: () => fetchRecipeById(id as string),
     enabled: !!id
-  });
-
+  })</
   const { data: recipeConcepts } = useQuery({
     queryKey: ["recipe-concepts", id],
     queryFn: async () => {
@@ -293,7 +294,8 @@ const AdminEditRecipePage = () => {
         meta_title: recipe.meta_title ?? "",
         meta_description: recipe.meta_description ?? "",
         canonical_url: recipe.canonical_url ?? "",
-        og_image_url: recipe.og_image_url ?? ""
+        og_image_url: recipe.og_image_url ?? "",
+        schema_jsonld_enabled: recipe.schema_jsonld_enabled ?? false
       });
     }
   }, [recipe, reset]);
@@ -308,6 +310,15 @@ const AdminEditRecipePage = () => {
   const watchedCanonicalUrl = watch("canonical_url");
   const watchedOgImageUrl = watch("og_image_url");
   const watchedDifficultyDetailed = watch("difficulty_detailed");
+  const watchedCategory = watch("category");
+  const watchedCuisine = watch("cuisine");
+  const watchedTags = watch("tags");
+  const watchedPrepTime = watch("prep_time_min");
+  const watchedCookTime = watch("cook_time_min");
+  const watchedServings = watch("servings");
+  const watchedIngredientsText = watch("ingredients_text");
+  const watchedInstructionsDetailed = watch("instructions_detailed");
+  const watchedMetaDescriptionForJsonLd = watch("meta_description");
 
   useEffect(() => {
     if (watchedTitle && !isNonEmpty(watchedMetaTitle)) {
@@ -361,11 +372,89 @@ const AdminEditRecipePage = () => {
     setValue
   ]);
 
+  const [prePublishIssues, setPrePublishIssues] = useState<string[]>([]);
+  const [showPrePublishModal, setShowPrePublishModal] = useState(false);
+
+  const computePrePublishIssues = (
+    values: RecipeFormValues,
+    hasImage: boolean
+  ): string[] => {
+    const issues: string[] = [];
+
+    if (!hasImage) {
+      issues.push("Image principale manquante.");
+    }
+    if (!isNonEmpty(values.description)) {
+      issues.push("Description éditoriale manquante.");
+    }
+    if (!isNonEmpty(values.ingredients_text)) {
+      issues.push("Texte des ingrédients manquant.");
+    }
+    if (!isNonEmpty(values.instructions_detailed)) {
+      issues.push("Instructions détaillées manquantes.");
+    }
+    if (!isNonEmpty(values.cultural_history)) {
+      issues.push("Histoire / contexte culturel manquant.");
+    }
+    if (!isNonEmpty(values.techniques)) {
+      issues.push("Techniques mises en avant manquantes.");
+    }
+    if (!isNonEmpty(values.nutritional_notes)) {
+      issues.push("Notes nutritionnelles manquantes.");
+    }
+    if (!isNonEmpty(values.meta_title)) {
+      issues.push("Titre SEO manquant.");
+    }
+    if (!isNonEmpty(values.meta_description)) {
+      issues.push("Description SEO manquante.");
+    }
+    if (!isNonEmpty(values.chef_tips) && !isNonEmpty(values.difficulty_detailed)) {
+      issues.push("Astuces Chefito ou détails de difficulté manquants.");
+    }
+
+    if (ingredientsCount &lt; 3) {
+      issues.push(
+        "Moins de 3 ingrédients normalisés dans recipe_ingredients_normalized."
+      );
+    }
+    if (stepsCount &lt; 3) {
+      issues.push(
+        "Moins de 3 étapes enrichies dans recipe_steps_enhanced."
+      );
+    }
+    if ((recipeConcepts?.length ?? 0) &lt; 1) {
+      issues.push(
+        "Aucun concept scientifique lié via recipe_concepts."
+      );
+    }
+
+    return issues;
+  };
+
   const onSubmit = async (values: RecipeFormValues) => {
     if (!id) return;
 
     setMessage(null);
     setErrorMessage(null);
+    setShowPrePublishModal(false);
+    setPrePublishIssues([]);
+
+    const hasImageCandidate =
+      !!imageFile ||
+      isNonEmpty(values.image_url) ||
+      (recipe && isNonEmpty(recipe.image_url));
+
+    if (values.status === "published") {
+      const issues = computePrePublishIssues(values, hasImageCandidate);
+      if (issues.length > 0) {
+        setPrePublishIssues(issues);
+        setShowPrePublishModal(true);
+        setErrorMessage(
+          "Publication bloquée : certains éléments premium sont manquants."
+        );
+        return;
+      }
+    }
 
     try {
       let imageUrlToSave: string | null = values.image_url || null;
@@ -373,12 +462,6 @@ const AdminEditRecipePage = () => {
       if (imageFile) {
         const uploadedUrl = await uploadRecipeImage(imageFile, values.title);
         imageUrlToSave = uploadedUrl;
-      }
-
-      if (!imageUrlToSave) {
-        throw new Error(
-          "Merci d’ajouter une image (via URL ou upload) pour cette recette."
-        );
       }
 
       const slug =
@@ -417,7 +500,8 @@ const AdminEditRecipePage = () => {
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
-        og_image_url: values.og_image_url || null
+        og_image_url: values.og_image_url || null,
+        schema_jsonld_enabled: values.schema_jsonld_enabled ?? false
       };
 
       const { error } = await supabase
@@ -528,6 +612,64 @@ const AdminEditRecipePage = () => {
     [recipe]
   );
   const isPremium = premiumMissing.length === 0;
+
+  const jsonLdObject = useMemo(() => {
+    if (!recipe) return null;
+
+    return buildRecipeJsonLd({
+      id: recipe.id,
+      slug: watchedSlug || recipe.slug || "",
+      title: watchedTitle || recipe.title || "",
+      description: watchedDescription || recipe.description || "",
+      metaDescription:
+        watchedMetaDescriptionForJsonLd || recipe.meta_description,
+      imageUrl: watchedImageUrl || recipe.image_url,
+      category: watchedCategory || recipe.category,
+      cuisine: watchedCuisine || recipe.cuisine,
+      tags: (watchedTags as string[]) ?? (recipe.tags as string[]) ?? [],
+      prepTimeMin:
+        typeof watchedPrepTime === "number"
+          ? watchedPrepTime
+          : recipe.prep_time_min,
+      cookTimeMin:
+        typeof watchedCookTime === "number"
+          ? watchedCookTime
+          : recipe.cook_time_min,
+      servings:
+        typeof watchedServings === "number"
+          ? watchedServings
+          : recipe.servings,
+      ingredientsText: watchedIngredientsText || recipe.ingredients_text,
+      instructionsDetailed:
+        watchedInstructionsDetailed || recipe.instructions_detailed
+    });
+  }, [
+    recipe,
+    watchedSlug,
+    watchedTitle,
+    watchedDescription,
+    watchedMetaDescriptionForJsonLd,
+    watchedImageUrl,
+    watchedCategory,
+    watchedCuisine,
+    watchedTags,
+    watchedPrepTime,
+    watchedCookTime,
+    watchedServings,
+    watchedIngredientsText,
+    watchedInstructionsDetailed
+  ]);
+
+  const jsonLdString = useMemo(
+    () =>
+      jsonLdObject ? JSON.stringify(jsonLdObject, null, 2) : "// JSON-LD généré à partir du formulaire",
+    [jsonLdObject]
+  );
+
+  const jsonLdIssues = useMemo(
+    () => (jsonLdObject ? validateRecipeJsonLd(jsonLdObject) : []),
+    [jsonLdObject]
+  );
 
   if (isLoading) {
     return (
@@ -1094,7 +1236,8 @@ const AdminEditRecipePage = () => {
               />
               <p className="mt-1 text-xs text-slate-500">
                 Vous pouvez fournir une URL ou uploader un fichier. En cas
-                d&apos;upload, le fichier est stocké dans Supabase Storage.
+                d&apos;upload, le fichier est stocké dans Supabase Storage
+                (taille max 5 Mo).
               </p>
             </div>
 
@@ -1152,54 +1295,115 @@ const AdminEditRecipePage = () => {
           </div>
         </section>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Onglet 4bis : SEO avancé & JSON-LD */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            5. SEO avancé – Schema.org Recipe (JSON-LD)
+          </h2>
+          <p className="text-xs text-slate-500">
+            Le JSON-LD ci-dessous est généré automatiquement à partir des champs
+            de la recette. Il pourra être injecté côté front pour améliorer la
+            compréhension de la recette par les moteurs de recherche.
+          </p>
+
           <div className="flex items-center gap-2">
-            <Button
+            <input
+              id="schema_jsonld_enabled"
+              type="checkbox"
+              className="h-3 w-3 accent-primary-500"
+              {...register("schema_jsonld_enabled")}
+            />
+            <label
+              htmlFor="schema_jsonld_enabled"
+              className="text-xs text-slate-200"
+            >
+              Inclure le JSON-LD Schema.org sur la page recette (flag pour le
+              front)
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-1">
+              <p className="mb-1 text-[11px] font-semibold text-slate-300">
+                JSON-LD généré
+              </p>
+              <pre className="max-h-64 overflow-auto rounded-md border border-slate-800 bg-slate-950/60 p-3 text-[11px] text-slate-100">
+                {jsonLdString}
+              </pre>
+            </div>
+            <div className="md:col-span-1">
+              <p className="mb-1 text-[11px] font-semibold text-slate-300">
+                Validation de base
+              </p>
+              {jsonLdIssues.length === 0 ? (
+                <p className="text-[11px] text-emerald-300">
+                  Le JSON-LD contient les champs essentiels (name, description,
+                  image, ingrédients, instructions).
+                </p>
+              ) : (
+                <ul className="list-disc space-y-1 pl-4 text-[11px] text-amber-300">
+                  {jsonLdIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-[11px] text-slate-500">
+                Pour une validation complète, utilise l&apos;outil de test de
+                données structurées de Google ou Schema.org sur l&apos;URL
+                publique correspondante.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+         <<div className="flex items-center gap-2">
+           <<Button
               type="submit"
               variant="primary"
               disabled={isSubmitting}
               className="inline-flex items-center gap-2"
             >
               {isSubmitting && (
-                <LoadingSpinner size="sm" className="text-slate-100" />
+               <<LoadingSpinner size="sm" className="text-slate-100" />
               )}
-              <span>Mettre à jour la recette</span>
-            </Button>
+             <<span>Mettre à jour la recet</</span>
+          </</Button>
 
-            <Button
+           <<Button
               type="button"
               variant="secondary"
               className="inline-flex items-center gap-2 text-xs text-red-300 hover:text-red-200"
               onClick={handleDelete}
             >
               Supprimer
-            </Button>
-          </div>
+          </</Button>
+        </</div>
 
-          <div className="flex flex-col items-end gap-1 text-xs">
-            {message && <p className="text-emerald-300">{message}</p>}
-            {errorMessage && <p className="text-red-300">{errorMessage}</p>}
-          </div>
-        </div>
-      </form>
+         <<div className="flex flex-col items-end gap-1 text-xs">
+            {message & <<p className="text-emerald-300">{messa}</</p>}
+            {errorMessage & <<p className="text-red-300">{errorMessa}</</p>}
+        </</div>
+      </</div>
+    </</form>
 
       {/* Onglet 5 : Ingrédients structurés */}
       {id && (
-        <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeIngredientsEditor recipeId={id} />
-        </section>
+       <<section className="card mt-4 space-y-4 px-5 py-5">
+         <<RecipeIngredientsEditor recipeId={id} />
+      </</section>
       )}
 
       {/* Onglet 6 : Étapes enrichies */}
       {id && (
-        <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeStepsEditor recipeId={id} />
-        </section>
+       <<section className="card mt-4 space-y-4 px-5 py-5">
+         <<RecipeStepsEditor recipeId={id} />
+      </</section>
       )}
 
       {/* Onglet 7 : Concepts scientifiques */}
       {id && (
-        <section className="card mt-4 space-y-4 px-5 py-5">
+       <<section className="card mt-4 space-y-4 px-5 py-5">
           <RecipeConceptsEditor recipeId={id} />
         </section>
       )}
