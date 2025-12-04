@@ -61,6 +61,10 @@ Ce projet combine :
 - Auth Supabase gérée via un `AuthProvider` React (`src/hooks/useAuth.tsx`).
 - Layout global `_app.tsx` (pages router) + layout `app/layout.tsx` (App Router).
 - L’accès à `/admin/*` est réservé aux utilisateurs authentifiés avec un rôle `admin` (via la table `user_profiles` / `profiles`).
+- Pages d’auth principales :
+  - `/auth/sign-in` : connexion email + mot de passe (Supabase Auth).
+  - `/auth/reset-password-request` : demande d’email de réinitialisation du mot de passe.
+  - `/auth/reset-password` : définition d’un nouveau mot de passe à partir du lien Supabase.
 
 ---
 
@@ -943,6 +947,23 @@ L’application est exposée par défaut sur `http://localhost:3000`.
 - `npm run typecheck` : lance TypeScript en mode `--noEmit` pour vérifier les types.
 
 ---
+
+### 8.5. Flux d’authentification (email + mot de passe)
+
+- Connexion :
+  - Page : `/auth/sign-in`
+  - Authentification via `supabase.auth.signInWithPassword` (email + mot de passe).
+  - L’utilisateur doit avoir une entrée dans `user_profiles` avec un `role` (`admin` ou `editor`).
+
+- Réinitialisation de mot de passe :
+  - Page : `/auth/reset-password-request`
+    - Formulaire d’email, déclenche `supabase.auth.resetPasswordForEmail(email, { redirectTo: NEXT_PUBLIC_SITE_URL + '/auth/reset-password' })`.
+  - Page : `/auth/reset-password`
+    - Appel `supabase.auth.getSession()` pour valider le lien de réinitialisation.
+    - Formulaire “nouveau mot de passe / confirmation”.
+    - Mise à jour via `supabase.auth.updateUser({ password })`, puis redirection vers `/auth/sign-in`.
+
+Les pages de saisie de mot de passe incluent une option d’affichage/masquage temporaire du mot de passe pour faciliter la saisie.
 
 ## 9. Configuration Supabase & environnement
 
