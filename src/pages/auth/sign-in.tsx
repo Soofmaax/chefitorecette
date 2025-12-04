@@ -12,6 +12,7 @@ const SignInPage = () => {
   const router = useRouter();
   const { user, signInWithEmail } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -68,13 +69,22 @@ const SignInPage = () => {
 
           <div>
             <label htmlFor="password">Mot de passe</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              className="mt-1 w-full"
-              {...register("password")}
-            />
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                className="w-full"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-800"
+              >
+                {showPassword ? "Masquer" : "Afficher"}
+              </button>
+            </div>
             {errors.password && (
               <p className="form-error">{errors.password.message}</p>
             )}

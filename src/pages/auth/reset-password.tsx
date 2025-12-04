@@ -26,6 +26,7 @@ const ResetPasswordPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -101,20 +102,29 @@ const ResetPasswordPage = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label htmlFor="password">Nouveau mot de passe</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                className="mt-1 w-full"
-                {...register("password", { required: true })}
-              />
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  className="w-full"
+                  {...register("password", { required: true })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-800"
+                >
+                  {showPassword ? "Masquer" : "Afficher"}
+                </button>
+              </div>
             </div>
 
             <div>
               <label htmlFor="passwordConfirm">Confirmer le mot de passe</label>
               <input
                 id="passwordConfirm"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 className="mt-1 w-full"
                 {...register("passwordConfirm", { required: true })}
