@@ -38,7 +38,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     } finally {
-      router.replace("/auth/sign-in");
+      if (typeof window !== "undefined") {
+        // On force une navigation complète pour repartir
+        // d'une page de connexion propre.
+        window.location.href = "/auth/sign-in";
+      } else {
+        router.replace("/auth/sign-in");
+      }
     }
   };
 
