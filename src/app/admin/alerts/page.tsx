@@ -219,7 +219,6 @@ const AdminAlertsPage = () => {
       });
     }
   });
-  });
 
   const pendingCount = alerts?.length ?? 0;
 
