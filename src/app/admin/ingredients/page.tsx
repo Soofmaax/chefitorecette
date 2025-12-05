@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +33,7 @@ const fetchIngredientsCatalog = async (): Promise<IngredientCatalog[]> => {
 };
 
 const AdminIngredientsPage = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<IngredientCatalog | null>(null);
   const [form, setForm] = useState<Partial<IngredientCatalog>>({});
@@ -136,7 +138,15 @@ const AdminIngredientsPage = () => {
             normalisation des recettes (quantités, audio, usages scientifiques).
           </p>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={() => router.push("/admin/ingredients/import")}
+          >
+            Import CSV
+          </Button>
           <Button type="button" variant="primary" onClick={startCreate}>
             Nouvel ingrédient
           </Button>
