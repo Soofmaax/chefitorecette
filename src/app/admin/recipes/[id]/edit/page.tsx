@@ -17,6 +17,7 @@ import {
 } from "@/lib/recipesQuality";
 import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useQuery } from "@tanstack/react-query";
 import { triggerEmbedding } from "@/lib/embeddings";
 import { buildRecipeJsonLd, validateRecipeJsonLd } from "@/lib/seo";
 import { TagInput } from "@/components/ui/TagInput";
@@ -138,63 +139,11 @@ const DIETARY_LABEL_OPTIONS = [
   { value: "casher", label: "Casher" }
 ];
 
-const getRecipeMissingFields = (recipe: any): string[] => {
-  const missing: string[] = [];
-
-  if (recipe.status !== "published") {
-    missing.push("Statut publié");
-  }
-
-  if (!isNonEmpty(recipe.image_url)) {
-    missing.push("Image");
-  }
-
-  if (!isNonEmpty(recipe.description)) {
-    missing.push("Description");
-  }
-
-  if (!isNonEmpty(recipe.ingredients_text)) {
-    missing.push("Ingrédients");
-  }
-
-  if (!isNonEmpty(recipe.instructions_detailed)) {
-    missing.push("Instructions détaillées");
-  }
-
-  if (!isNonEmpty(recipe.cultural_history)) {
-    missing.push("Histoire / contexte culturel");
-  }
-
-  if (!isNonEmpty(recipe.techniques)) {
-    missing.push("Techniques");
-  }
-
-  if (!isNonEmpty(recipe.nutritional_notes)) {
-    missing.push("Notes nutritionnelles");
-  }
-
-  if (!isNonEmpty(recipe.meta_title)) {
-    missing.push("Titre SEO");
-  }
-
-  if (!isNonEmpty(recipe.meta_description)) {
-    missing.push("Description SEO");
-  }
-
-  if (
-    !isNonEmpty(recipe.chef_tips) &&
-    !isNonEmpty(recipe.difficulty_detailed)
-  ) {
-    missing.push("Astuces ou détails difficulté");
-  }
-
-  return missing;
-};
-
 const AdminEditRecipePage = () => {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string | undefined;
+  const { showToast } = useToast();
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -1166,7 +1115,7 @@ const AdminEditRecipePage = () => {
             </div>
           </div>
           <datalist id="recipe-cuisines-options">
-            {allCuisines.map((c) => (
+            {allCuisines.map((c: string) => (
               <option key={c} value={c} />
             ))}
           </datalist>
@@ -1474,7 +1423,7 @@ const AdminEditRecipePage = () => {
                 Aucun ustensile n&apos;est encore défini dans le catalogue.
               </p>
             ) : (
-              utensilsCatalog.map((utensil) => {
+              utensilsCatalog.map((utensil: Utensil) => {
                 const checked = selectedUtensils.includes(utensil.key);
                 return (
                   <label
