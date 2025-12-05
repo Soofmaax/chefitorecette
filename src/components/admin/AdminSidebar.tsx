@@ -8,17 +8,25 @@ import {
   AlertTriangle,
   BookOpen,
   Brain,
-  Headphones
+  Headphones,
+  CalendarDays,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Recettes", href: "/admin/recipes", icon: Utensils },
+  {
+    name: "Calendrier éditorial",
+    href: "/admin/editorial-calendar",
+    icon: CalendarDays
+  },
   { name: "Alertes similarité", href: "/admin/alerts", icon: AlertTriangle },
   { name: "Ingrédients", href: "/admin/ingredients", icon: BookOpen },
   { name: "Connaissances", href: "/admin/knowledge", icon: Brain },
-  { name: "Audio", href: "/admin/audio", icon: Headphones }
+  { name: "Audio", href: "/admin/audio", icon: Headphones },
+  { name: "Ustensiles", href: "/admin/utensils", icon: Wrench }
 ];
 
 interface AdminSidebarProps {

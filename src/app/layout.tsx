@@ -5,7 +5,8 @@ import { AppProviders } from "./providers";
 
 export const metadata: Metadata = {
   title: "Chefito Admin",
-  description: "Interface d'administration premium pour les recettes et le RAG"
+  description:
+    "Interface d'administration pour les recettes enrichies et le RAG"
 };
 
 export default function RootLayout({

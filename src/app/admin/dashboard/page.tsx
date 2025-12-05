@@ -43,7 +43,7 @@ const AdminDashboardPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-          Dashboard admin – Recettes premium
+          Dashboard admin – Recettes enrichies
         </h1>
         <p className="mt-1 text-sm text-slate-400">
           Vue d’ensemble des recettes, ingrédients, concepts scientifiques et
@@ -104,11 +104,11 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
-      {/* Barres de progression premium */}
+      {/* Barres de progression de complétude */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">
-            Enrichissement premium
+            Recettes avec embedding RAG
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
             <span>{enrichedRecipes} recettes enrichies</span>
@@ -146,18 +146,13 @@ const AdminDashboardPage = () => {
           <p className="text-xs uppercase tracking-wide text-slate-400">
             Embeddings &amp; intégrations
           </p>
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-            <span>
-              Cache hit Redis&nbsp;:
-              {Math.round((stats.performance?.cacheHitRatio ?? 0) * 100)}%
-            </span>
-            <span>
-              Données chiffrées&nbsp;:
-              {stats.performance?.encryptedData ?? 0}
-            </span>
-          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Ce panneau résume l&apos;état des intégrations RAG (Redis, S3, Vault)
+            lorsque les métriques avancées sont disponibles.
+          </p>
           <p className="mt-2 text-xs text-slate-500">
-            Indicateurs issus des fonctions Edge Redis / S3 / Vault.
+            Les métriques détaillées (taux de hit cache, objets chiffrés, etc.)
+            sont actuellement désactivées dans ce déploiement.
           </p>
         </div>
       </div>

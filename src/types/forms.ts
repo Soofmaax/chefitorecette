@@ -26,14 +26,79 @@ export const recipeSchema = z.object({
     .number()
     .int()
     .min(1, "Nombre de portions invalide"),
+  rest_time_min: z.coerce
+    .number()
+    .int()
+    .min(0, "Temps de repos invalide")
+    .default(0),
+
+  storage_duration_days: z.coerce
+    .number()
+    .int()
+    .min(0, "Durée de conservation invalide")
+    .optional(),
+
+  storage_instructions: z.string().optional().or(z.literal("")),
+
+  serving_temperatures: z
+    .array(
+      z.enum(["chaud", "tiede", "ambiante", "froid", "au_choix"])
+    )
+    .default([]),
+
+  storage_modes: z
+    .array(
+      z.enum([
+        "refrigerateur",
+        "congelateur",
+        "ambiante",
+        "sous_vide",
+        "boite_hermetique",
+        "au_choix"
+      ])
+    )
+    .default([]),
 
   difficulty: z.enum(["beginner", "intermediate", "advanced"], {
     required_error: "Difficulté requise"
   }),
-  category: z.string().min(1, "Catégorie requise"),
+  category: z
+    .enum([
+      "entree",
+      "plat_principal",
+      "accompagnement",
+      "dessert",
+      "aperitif",
+      "gateau",
+      "boisson",
+      "sauce",
+      "test"
+    ])
+    .default("plat_principal"),
   cuisine: z.string().min(1, "Cuisine requise"),
 
   tags: z.array(z.string()).default([]),
+
+  dietary_labels: z
+    .array(
+      z.enum([
+        "vegetarien",
+        "vegetalien",
+        "vegan",
+        "pescetarien",
+        "sans_gluten",
+        "sans_lactose",
+        "sans_oeuf",
+        "sans_arachide",
+        "sans_fruits_a_coque",
+        "sans_soja",
+        "sans_sucre_ajoute",
+        "sans_sel_ajoute",
+        "halal",
+        "casher"
+      ])
+    )
+    .default([]),
 
   status: z.enum(["draft", "scheduled", "published"]).default("draft"),
   publish_at: z
@@ -66,7 +131,10 @@ export const recipeSchema = z.object({
     .string()
     .url("URL d’image Open Graph invalide")
     .optional()
-    .or(z.literal(""))
+    .or(z.literal("")),
+
+  // Indicateur pour activer / désactiver l'inclusion du JSON-LD Schema.org
+  schema_jsonld_enabled: z.boolean().default(false)
 });
 
 export type RecipeFormValues = z.infer<typeof recipeSchema>;

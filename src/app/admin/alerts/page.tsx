@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface Recipe {
   id: string;
@@ -76,6 +77,7 @@ const fetchAlertsWithRecipes = async (): Promise<AlertWithRecipes[]> => {
 
 const AdminAlertsPage = () => {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const {
     data: alerts,
@@ -102,6 +104,18 @@ const AdminAlertsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["similarity-alerts"] });
+      showToast({
+        type: "success",
+        message: "Alerte marquée comme \"recettes différentes\"."
+      });
+    },
+    onError: (err: any) => {
+      showToast({
+        type: "error",
+        message:
+          err?.message ??
+          "Erreur lors de la mise à jour de l’alerte de similarité."
+      });
     }
   });
 
@@ -141,6 +155,18 @@ const AdminAlertsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["similarity-alerts"] });
+      showToast({
+        type: "success",
+        message: "Alerte marquée comme relation parent/enfant."
+      });
+    },
+    onError: (err: any) => {
+      showToast({
+        type: "error",
+        message:
+          err?.message ??
+          "Erreur lors de l’enregistrement de la relation parent/enfant."
+      });
     }
   });
 
@@ -150,10 +176,23 @@ const AdminAlertsPage = () => {
       canonicalId: string;
       duplicateId: string;
     }) => {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error(
+          "Session invalide ou expirée. Veuillez vous reconnecter."
+        );
+      }
+
       const res = await fetch("/api/recipes/merge", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
         },
         body: JSON.stringify(params)
       });
@@ -167,6 +206,17 @@ const AdminAlertsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["similarity-alerts"] });
+      showToast({
+        type: "success",
+        message: "Fusion des recettes effectuée avec succès."
+      });
+    },
+    onError: (err: any) => {
+      showToast({
+        type: "error",
+        message:
+          err?.message ?? "Erreur lors de l’appel à l’API de fusion."
+      });
     }
   });
 

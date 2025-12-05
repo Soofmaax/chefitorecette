@@ -30,11 +30,15 @@ const NewRecipePage = () => {
       image_url: "",
       prep_time_min: 0,
       cook_time_min: 0,
+      rest_time_min: 0,
       servings: 1,
       difficulty: "beginner",
-      category: "",
+      category: "plat_principal",
       cuisine: "",
       tags: [],
+      dietary_labels: [],
+      serving_temperatures: [],
+      storage_modes: [],
       status: "draft",
       publish_at: "",
       ingredients_text: "",
@@ -45,10 +49,13 @@ const NewRecipePage = () => {
       source_info: "",
       difficulty_detailed: "",
       nutritional_notes: "",
+      storage_instructions: "",
+      storage_duration_days: undefined,
       meta_title: "",
       meta_description: "",
       canonical_url: "",
-      og_image_url: ""
+      og_image_url: "",
+      schema_jsonld_enabled: false
     }
   });
 
@@ -97,11 +104,25 @@ const NewRecipePage = () => {
         image_url: imageUrlToSave,
         prep_time_min: values.prep_time_min,
         cook_time_min: values.cook_time_min,
+        rest_time_min: values.rest_time_min,
         servings: values.servings,
         difficulty: values.difficulty,
         category: values.category,
         cuisine: values.cuisine,
         tags: values.tags,
+        dietary_labels:
+          values.dietary_labels && values.dietary_labels.length > 0
+            ? values.dietary_labels
+            : null,
+        serving_temperatures:
+          values.serving_temperatures &&
+          values.serving_temperatures.length > 0
+            ? values.serving_temperatures
+            : null,
+        storage_modes:
+          values.storage_modes && values.storage_modes.length > 0
+            ? values.storage_modes
+            : null,
         status: values.status,
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -112,10 +133,17 @@ const NewRecipePage = () => {
         source_info: values.source_info || null,
         difficulty_detailed: values.difficulty_detailed || null,
         nutritional_notes: values.nutritional_notes || null,
+        storage_instructions: values.storage_instructions || null,
+        storage_duration_days:
+          typeof values.storage_duration_days === "number"
+            ? values.storage_duration_days
+            : null,
+        serving_temperature: null,
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
-        og_image_url: values.og_image_url || null
+        og_image_url: values.og_image_url || null,
+        schema_jsonld_enabled: values.schema_jsonld_enabled ?? false
       };
 
       const { data: recipe, error } = await supabase
@@ -171,11 +199,15 @@ const NewRecipePage = () => {
         image_url: "",
         prep_time_min: 0,
         cook_time_min: 0,
+        rest_time_min: 0,
         servings: 1,
         difficulty: "beginner",
-        category: "",
+        category: "plat_principal",
         cuisine: "",
         tags: [],
+        dietary_labels: [],
+        serving_temperatures: [],
+        storage_modes: [],
         status: "draft",
         publish_at: "",
         ingredients_text: "",
@@ -186,10 +218,13 @@ const NewRecipePage = () => {
         source_info: "",
         difficulty_detailed: "",
         nutritional_notes: "",
+        storage_instructions: "",
+        storage_duration_days: undefined,
         meta_title: "",
         meta_description: "",
         canonical_url: "",
-        og_image_url: ""
+        og_image_url: "",
+        schema_jsonld_enabled: false
       });
       setImageFile(null);
       // eslint-disable-next-line no-console

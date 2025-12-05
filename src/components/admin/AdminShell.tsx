@@ -57,7 +57,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({
 
   const title =
     pathname && pathname.startsWith("/admin")
-      ? "Admin Chefito – Recettes premium"
+      ? "Admin Chefito – Recettes enrichies"
       : "Interface d'administration";
 
   return (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +12,7 @@ const SignInPage = () => {
   const router = useRouter();
   const { user, signInWithEmail } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -34,7 +36,9 @@ const SignInPage = () => {
     setErrorMessage(null);
     const { error } = await signInWithEmail(values.email, values.password);
     if (error) {
-      setErrorMessage(error.message);
+      // Message volontairement générique pour ne pas donner d'indication
+      // sur l'existence du compte ou la nature de l'erreur.
+      setErrorMessage("Identifiants invalides. Merci de réessayer.");
       return;
     }
     router.replace("/dashboard");
@@ -44,10 +48,10 @@ const SignInPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 to-slate-900 px-4">
       <div className="card w-full max-w-md px-6 py-6">
         <h1 className="mb-2 text-lg font-semibold tracking-tight text-slate-100">
-          Connexion à l’interface RAG
+          Connexion à l’espace d’administration
         </h1>
         <p className="mb-6 text-sm text-slate-400">
-          Connectez-vous avec votre compte Supabase (rôle admin ou éditeur).
+          Connectez-vous avec vos identifiants d’administrateur ou d’éditeur.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -67,13 +71,22 @@ const SignInPage = () => {
 
           <div>
             <label htmlFor="password">Mot de passe</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              className="mt-1 w-full"
-              {...register("password")}
-            />
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                className="w-full"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-800"
+              >
+                {showPassword ? "Masquer" : "Afficher"}
+              </button>
+            </div>
             {errors.password && (
               <p className="form-error">{errors.password.message}</p>
             )}
@@ -102,15 +115,16 @@ const SignInPage = () => {
           </Button>
         </form>
 
-        <p className="mt-6 text-xs text-slate-500">
-          L’authentification s’appuie sur Supabase Auth. Vérifiez que vos
-          utilisateurs et profils sont correctement configurés dans la table{" "}
-          <code className="rounded bg-slate-800/80 px-1">
-            user_profiles
-          </code>
-          .
-        </p>
-      </div>
+        <div className="mt-4 flex flex-col items-center gap-2 text-xs text-slate-500">
+          <Link
+            href="/auth/reset-password-request"
+            className="text-xs text-primary-300 hover:text-primary-200"
+          >
+            Mot de passe oublié ? Réinitialiser
+          </Link>
+        </div>
+
+        </div>
     </div>
   );
 };

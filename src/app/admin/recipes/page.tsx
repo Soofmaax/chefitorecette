@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { triggerEmbedding } from "@/lib/embeddings";
+import { getRecipeMissingFields } from "@/lib/recipesQuality";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
@@ -27,6 +28,10 @@ interface AdminRecipe {
   techniques: string | null;
   difficulty_detailed: string | null;
   nutritional_notes: string | null;
+  storage_instructions: string | null;
+  storage_duration_days: number | null;
+  storage_modes: string[] | null;
+  serving_temperatures: string[] | null;
   meta_title: string | null;
   meta_description: string | null;
   embedding: unknown | null;
@@ -56,10 +61,17 @@ type RagFilter =
   | "no_steps"
   | "no_concepts";
 
+type ConservationFilter = "all" | "with" | "without";
+type UtensilsFilter = "all" | "with" | "without";
+
 interface RagCounts {
   ingredients: number;
   steps: number;
   concepts: number;
+}
+
+interface UtensilRow {
+  recipe_id: string;
 }
 
 interface RagInfo {
@@ -90,65 +102,12 @@ interface CuisineRow {
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
 
-const getPremiumMissing = (recipe: AdminRecipe): string[] => {
-  const missing: string[] = [];
-
-  if (recipe.status !== "published") {
-    missing.push("Statut publié");
-  }
-
-  if (!isNonEmpty(recipe.image_url)) {
-    missing.push("Image");
-  }
-
-  if (!isNonEmpty(recipe.description)) {
-    missing.push("Description");
-  }
-
-  if (!isNonEmpty(recipe.ingredients_text)) {
-    missing.push("Ingrédients");
-  }
-
-  if (!isNonEmpty(recipe.instructions_detailed)) {
-    missing.push("Instructions détaillées");
-  }
-
-  if (!isNonEmpty(recipe.cultural_history)) {
-    missing.push("Histoire / contexte culturel");
-  }
-
-  if (!isNonEmpty(recipe.techniques)) {
-    missing.push("Techniques");
-  }
-
-  if (!isNonEmpty(recipe.nutritional_notes)) {
-    missing.push("Notes nutritionnelles");
-  }
-
-  if (!isNonEmpty(recipe.meta_title)) {
-    missing.push("Titre SEO");
-  }
-
-  if (!isNonEmpty(recipe.meta_description)) {
-    missing.push("Description SEO");
-  }
-
-  if (
-    !isNonEmpty(recipe.chef_tips) &&
-    !isNonEmpty(recipe.difficulty_detailed)
-  ) {
-    missing.push("Astuces ou détails difficulté");
-  }
-
-  return missing;
-};
-
-const isEnrichedPremium = (recipe: AdminRecipe): boolean => {
-  return getPremiumMissing(recipe).length === 0;
+const isCompleteRecipe = (recipe: AdminRecipe): boolean => {
+  return getRecipeMissingFields(recipe).length === 0;
 };
 
 const computeMissingFields = (recipe: AdminRecipe): string[] => {
-  return getPremiumMissing(recipe);
+  return getRecipeMissingFields(recipe);
 };
 
 const fetchRecipes = async (
@@ -171,7 +130,7 @@ const fetchRecipes = async (
   let query = supabase
     .from("recipes")
     .select(
-      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding",
+      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, storage_modes, serving_temperatures, meta_title, meta_description, embedding",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -223,6 +182,18 @@ const fetchRecipes = async (
     items: ((data as AdminRecipe[]) ?? []).filter((r) => !!r.id),
     total: count ?? 0
   };
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  entree: "Entrée",
+  plat_principal: "Plat principal",
+  accompagnement: "Accompagnement",
+  dessert: "Dessert",
+  aperitif: "Apéritif",
+  gateau: "Gâteau",
+  boisson: "Boisson",
+  sauce: "Sauce",
+  test: "Test"
 };
 
 const fetchCategories = async (): Promise<string[]> => {
@@ -337,6 +308,31 @@ const computeRagStatus = (
   return { status, hasIngredients, hasSteps, hasConcepts };
 };
 
+const fetchUtensilsPresence = async (
+  recipeIds: string[]
+): Promise<Record<string, boolean>> => {
+  if (recipeIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("recipe_utensils")
+    .select("recipe_id")
+    .in("recipe_id", recipeIds);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as UtensilRow[] | null) ?? [];
+  const map: Record<string, boolean> = {};
+  rows.forEach((row) => {
+    map[row.recipe_id] = true;
+  });
+
+  return map;
+};
+
 const AdminRecipesPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
@@ -345,8 +341,24 @@ const AdminRecipesPage = () => {
   const [search, setSearch] = useState("");
   const [slugOrId, setSlugOrId] = useState("");
   const [ragFilter, setRagFilter] = useState<RagFilter>("all");
+  const [conservationFilter, setConservationFilter] =
+    useState<ConservationFilter>("all");
+  const [utensilsFilter, setUtensilsFilter] =
+    useState<UtensilsFilter>("all");
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
+
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setDifficultyFilter("all");
+    setCategoryFilter("all");
+    setCuisineFilter("all");
+    setSearch("");
+    setSlugOrId("");
+    setRagFilter("all");
+    setConservationFilter("all");
+    setUtensilsFilter("all");
+  };
 
   // Reset page when filtres, recherche ou filtre RAG changent
   useEffect(() => {
@@ -358,7 +370,9 @@ const AdminRecipesPage = () => {
     cuisineFilter,
     search,
     slugOrId,
-    ragFilter
+    ragFilter,
+    conservationFilter,
+    utensilsFilter
   ]);
 
   const {
@@ -395,12 +409,14 @@ const AdminRecipesPage = () => {
 
   const { data: categories = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-categories"],
-    queryFn: fetchCategories
+    queryFn: fetchCategories,
+    staleTime: 10 * 60 * 1000
   });
 
   const { data: cuisines = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-cuisines"],
-    queryFn: fetchCuisines
+    queryFn: fetchCuisines,
+    staleTime: 10 * 60 * 1000
   });
 
   const recipes = useMemo<AdminRecipe[]>(
@@ -421,9 +437,24 @@ const AdminRecipesPage = () => {
     placeholderData: keepPreviousData
   });
 
+  const { data: utensilsPresenceData } = useQuery<
+    Record<string, boolean>,
+    Error
+  >({
+    queryKey: ["admin-recipes-utensils", recipeIds],
+    queryFn: () => fetchUtensilsPresence(recipeIds),
+    enabled: recipeIds.length > 0,
+    placeholderData: keepPreviousData
+  });
+
   const ragCounts = useMemo<Record<string, RagCounts>>(
     () => ragCountsData ?? {},
     [ragCountsData]
+  );
+
+  const utensilsPresence = useMemo<Record<string, boolean>>(
+    () => utensilsPresenceData ?? {},
+    [utensilsPresenceData]
   );
 
   const recipesWithRag = useMemo<RecipeWithRagInfo[]>(
@@ -437,7 +468,7 @@ const AdminRecipesPage = () => {
   );
 
   const filteredRecipes = useMemo<RecipeWithRagInfo[]>(() => {
-    return recipesWithRag.filter(({ ragInfo }) => {
+    return recipesWithRag.filter(({ recipe, ragInfo }) => {
       const { status, hasIngredients, hasSteps, hasConcepts } = ragInfo;
 
       if (ragFilter === "complete" && status !== "complete") return false;
@@ -447,9 +478,33 @@ const AdminRecipesPage = () => {
       if (ragFilter === "no_steps" && hasSteps) return false;
       if (ragFilter === "no_concepts" && hasConcepts) return false;
 
+      const hasServingTemps =
+        Array.isArray(recipe.serving_temperatures) &&
+        recipe.serving_temperatures.length > 0;
+      const hasStorageModes =
+        Array.isArray(recipe.storage_modes) &&
+        recipe.storage_modes.length > 0;
+      const hasStorageHints =
+        typeof recipe.storage_duration_days === "number" ||
+        isNonEmpty(recipe.storage_instructions);
+      const hasConservation =
+        hasServingTemps || hasStorageModes || hasStorageHints;
+      const hasUtensils = utensilsPresence[recipe.id] ?? false;
+
+      if (conservationFilter === "with" && !hasConservation) return false;
+      if (conservationFilter === "without" && hasConservation) return false;
+      if (utensilsFilter === "with" && !hasUtensils) return false;
+      if (utensilsFilter === "without" && hasUtensils) return false;
+
       return true;
     });
-  }, [recipesWithRag, ragFilter]);
+  }, [
+    recipesWithRag,
+    ragFilter,
+    conservationFilter,
+    utensilsFilter,
+    utensilsPresence
+  ]);
 
   const embeddingMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -470,11 +525,11 @@ const AdminRecipesPage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-            Recettes – Mode premium
+            Recettes – Mode enrichi
           </h1>
           <p className="mt-1 text-sm text-slate-400">
             Filtrez et enrichissez les recettes existantes avec des contenus
-            premium (science, audio, SEO).
+            enrichis (science, audio, SEO).
           </p>
           {total > 0 && (
             <p className="mt-1 text-xs text-slate-500">
@@ -501,7 +556,14 @@ const AdminRecipesPage = () => {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
+            >
+              Réinitialiser les filtres
+            </button>
             <select
               className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               value={statusFilter}
@@ -564,6 +626,32 @@ const AdminRecipesPage = () => {
               </option>
               <option value="no_steps">Sans étapes enrichies</option>
               <option value="no_concepts">Sans concepts scientifiques</option>
+            </select>
+
+            <select
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={conservationFilter}
+              onChange={(e) =>
+                setConservationFilter(
+                  e.target.value as ConservationFilter
+                )
+              }
+            >
+              <option value="all">Conservation (toutes)</option>
+              <option value="with">Avec conservation/service</option>
+              <option value="without">Sans conservation/service</option>
+            </select>
+
+            <select
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={utensilsFilter}
+              onChange={(e) =>
+                setUtensilsFilter(e.target.value as UtensilsFilter)
+              }
+            >
+              <option value="all">Ustensiles (tous)</option>
+              <option value="with">Avec ustensiles</option>
+              <option value="without">Sans ustensiles</option>
             </select>
           </div>
         </div>
@@ -643,13 +731,26 @@ const AdminRecipesPage = () => {
               ) : (
                 filteredRecipes.map(({ recipe, ragInfo }) => {
                   const missing = computeMissingFields(recipe);
-                  const enriched = isEnrichedPremium(recipe);
+                  const enriched = isCompleteRecipe(recipe);
                   const ragLabel =
                     ragInfo.status === "complete"
                       ? "RAG complet"
                       : ragInfo.status === "partial"
                       ? "RAG partiel"
                       : "RAG absent";
+
+                  const hasServingTemps =
+                    Array.isArray(recipe.serving_temperatures) &&
+                    recipe.serving_temperatures.length > 0;
+                  const hasStorageModes =
+                    Array.isArray(recipe.storage_modes) &&
+                    recipe.storage_modes.length > 0;
+                  const hasStorageHints =
+                    typeof recipe.storage_duration_days === "number" ||
+                    isNonEmpty(recipe.storage_instructions);
+                  const hasConservation =
+                    hasServingTemps || hasStorageModes || hasStorageHints;
+                  const hasUtensils = utensilsPresence[recipe.id] ?? false;
 
                   return (
                     <tr key={recipe.id}>
@@ -685,13 +786,16 @@ const AdminRecipesPage = () => {
                         {recipe.cuisine || "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-400">
-                        {recipe.category || "—"}
+                        {recipe.category
+                          ? CATEGORY_LABELS[recipe.category] ||
+                            recipe.category
+                          : "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-200">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           {enriched && (
                             <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                              ✅ enrichie
+                              ✅ complète
                             </span>
                           )}
                           {!enriched && (
@@ -702,6 +806,16 @@ const AdminRecipesPage = () => {
                           {missing.length > 0 && (
                             <span className="rounded bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200">
                               {missing.length} champ(s) manquant(s)
+                            </span>
+                          )}
+                          {hasConservation && (
+                            <span className="rounded bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-300">
+                              🌡 conservation / service
+                            </span>
+                          )}
+                          {hasUtensils && (
+                            <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-300">
+                              🔧 ustensiles
                             </span>
                           )}
                           <span className="rounded bg-slate-700/40 px-2 py-0.5 text-[11px] text-slate-300">
