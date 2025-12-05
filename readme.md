@@ -210,3 +210,113 @@ Actions depuis la liste :
 - Accès indirect à la prévisualisation : depuis la fiche d’édition, un bouton **“Prévisualiser la page publique”** ouvre `/admin/recipes/{id}/preview` avec un iframe embarquant `/recipes/{id}` (rendu front).
 
 Le catalogue d’ustensiles utilisé pour les badges et les filtres (icône 🔧) se gère via la page `/admin/utensils`.
+
+### 3.4. Bibliothèque d’ingrédients
+
+La bibliothèque d’ingrédients sert à normaliser les ingrédients des recettes (quantités structurées, lien avec l’audio, futur calcul nutritionnel, etc.).
+
+- Page de gestion : `/admin/ingredients`  
+  - Créer / modifier un ingrédient unitaire (nom canonique, nom affiché, catégorie, nom scientifique, clé audio).  
+  - Le champ `canonical_name` est la clé technique stable utilisée dans tout le système.
+- Import / mise à jour en masse : `/admin/ingredients/import`  
+  - Permet d’uploader un fichier CSV (séparateur `,` ou `;`) contenant au minimum :
+    - `canonical_name` : identifiant unique (ex. `pomme_de_terre`, `huile_olive`)  
+    - `display_name` : nom affiché (ex. `Pommes de terre`, `Huile d’olive`)  
+    - `category` : catégorie libre (matière grasse, légume, fruit…)  
+    - optionnel : `scientific_name`, `audio_key`
+  - L’outil propose un **mapping automatique des colonnes** du CSV vers les champs, que tu peux ajuster manuellement.
+  - L’import utilise un **upsert** côté Supabase :
+
+    ```ts
+    supabase
+      .from("ingredients_catalog")
+      .upsert(payload, { onConflict: "canonical_name" });
+    ```
+
+    - si `canonical_name` n’existe pas encore → **INSERT**  
+    - si `canonical_name` existe déjà → **UPDATE** de la ligne existante  
+    - aucun doublon ne peut être créé tant que `canonical_name` reste unique.
+
+**Workflow recommandé** :
+
+1. Maintenir un fichier maître des ingrédients (Google Sheets ou Excel).  
+2. Exporter en CSV dès que tu ajoutes ou modifies des entrées.  
+3. Aller sur `/admin/ingredients/import`, uploader le CSV, vérifier le mapping et la prévisualisation, puis lancer l’import.
+
+### 3.5. Knowledge base (concepts scientifiques)
+
+La **base de connaissances** décrit les grands concepts scientifiques utilisés pour expliquer les recettes (Maillard, émulsions, fermentation, gluten, etc.).
+
+- Page de gestion : `/admin/knowledge`  
+  - Créer et éditer chaque concept :  
+    - `concept_key` (clé stable, ex. `reaction_maillard`)  
+    - `title` (titre lisible)  
+    - `category` (chimie, physique, organisation…)  
+    - `work_status` (not_started, researching, draft, ready, published)  
+    - `difficulty_level` (1–3)  
+    - `usage_priority` (score d’importance, entier)  
+    - `short_definition`, `long_explanation`, `synonyms`
+- Import / mise à jour en masse : `/admin/knowledge/import`  
+  - CSV attendu (séparateur `,` ou `;`) avec colonnes mappables vers :
+    - `concept_key` (obligatoire)  
+    - `title` (obligatoire)  
+    - `category` (optionnel)  
+    - `work_status` (optionnel, valeurs : `not_started`, `researching`, `draft`, `ready`, `published` ou leurs équivalents FR)  
+    - `difficulty_level` (optionnel, nombre 1–3)  
+    - `usage_priority` (optionnel, entier)  
+    - `short_definition`, `long_explanation` (optionnels)  
+    - `synonyms` (optionnel, liste séparée par des virgules)
+  - L’outil d’import affiche :
+    - un **mapping de colonnes** (auto + modifiable),
+    - une **prévisualisation** des 20 premières lignes (OK / erreurs),
+    - le nombre de lignes valides / invalides.
+  - L’import effectue un **upsert** sur `concept_key` :
+
+    ```ts
+    supabase
+      .from("knowledge_base")
+      .upsert(payload, { onConflict: "concept_key" });
+    ```
+
+    - concept nouveau → création  
+    - concept existant (même `concept_key`) → mise à jour  
+    - pas de doublons si `concept_key` reste unique.
+
+### 3.8. Calendrier éditorial & import CSV
+
+Le calendrier éditorial sert à planifier les recettes (ou contenus) sur l’année : titre, catégorie, difficulté, mois cible, priorité, tags, angle Chefito.
+
+- Page de consultation : `/admin/editorial-calendar`  
+  - Vue des lignes du calendrier stockées dans `editorial_calendar`.  
+  - Filtres par mois, statut, priorité.
+- Import CSV : `/admin/editorial-calendar/import`  
+  - Upload d’un fichier CSV (séparateur auto-détecté `,` ou `;`) avec colonnes mappables vers :
+    - `title` : titre éditorial  
+    - `category` : catégorie libre  
+    - `difficulty` : `beginner`, `intermediate`, `advanced` (ou équivalent FR)  
+    - `target_month` : mois au format `YYYY-MM`, `YYYY-MM-DD` ou `DD/MM/YYYY` (converti en `YYYY-MM-01`)  
+    - `status` : `planned`, `draft`, `enriching`, `published` (ou équivalents FR)  
+    - `priority` : entier (1 = faible, 5 = très prioritaire)  
+    - `tags` : liste séparée par des virgules (stockée en `text[]`)  
+    - `chefito_angle` : angle pédagogique / business
+  - L’import actuel ajoute les lignes valides via un **INSERT** simple dans `editorial_calendar` (pas d’upsert).  
+    - Éviter de réimporter plusieurs fois exactement le même fichier sans nettoyage préalable si tu veux éviter les doublons.
+
+#### Workflow CSV global recommandé
+
+Pour structurer l’ensemble du système Chefito **sans script local**, tu peux :
+
+1. **Préparer les CSV dans un seul classeur** (Google Sheets / Excel) avec plusieurs onglets :
+   - `editorial_calendar` : calendrier éditorial annuel,
+   - `knowledge_base` : concepts scientifiques,
+   - `ingredients_catalog` : ingrédients canoniques,
+   - `utensils_catalog` : ustensiles / matériel.
+2. Exporter chaque onglet en CSV au moment opportun.
+3. Utiliser les pages d’import suivantes, directement dans le backoffice :
+   - `/admin/editorial-calendar/import` → remplit `editorial_calendar` (INSERT).  
+   - `/admin/knowledge/import` → alimente / met à jour `knowledge_base` (UPsert sur `concept_key`).  
+   - `/admin/ingredients/import` → alimente / met à jour `ingredients_catalog` (UPsert sur `canonical_name`).  
+   - `/admin/utensils/import` → alimente / met à jour `utensils_catalog` (UPsert sur `key`).
+4. Revenir ensuite sur :
+   - `/admin/recipes` et `/admin/recipes/[id]/edit` pour enrichir les recettes en s’appuyant sur ces catalogues (concepts, ingrédients, ustensiles),
+   - `/admin/knowledge` / `/admin/ingredients` / `/admin/utensils` pour les ajustements fins unitaires.

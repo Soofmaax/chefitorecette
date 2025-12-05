@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   useQuery,
   useMutation,
@@ -59,6 +60,7 @@ const difficultyOptions: { value: number; label: string }[] = [
 ];
 
 const AdminKnowledgePage = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const {
     data: concepts,
@@ -230,17 +232,29 @@ const AdminKnowledgePage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-          Base de connaissances scientifique
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Concepts scientifiques utilisés pour expliquer les recettes (principe
-          thermique, réactions de Maillard, émulsions…).
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
-          Workflow : non démarré → en recherche → brouillon → prêt → publié.
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-50">
+            Base de connaissances scientifique
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Concepts scientifiques utilisés pour expliquer les recettes (principe
+            thermique, réactions de Maillard, émulsions…).
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Workflow : non démarré → en recherche → brouillon → prêt → publié.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-[11px]"
+            onClick={() => router.push("/admin/knowledge/import")}
+          >
+            Import CSV
+          </Button>
+        </div>
       </div>
 
       {/* Formulaire de création / édition */}
