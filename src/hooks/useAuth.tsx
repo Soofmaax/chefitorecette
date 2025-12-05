@@ -160,11 +160,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password
       });
 
-      if (!result.error && result.data.user) {
-        const userWithRole = await fetchUserWithRole(result.data.user);
-        setUser(userWithRole);
-      }
-
+      // On ne bloque plus la réponse sur le chargement du profil.
+      // Le listener onAuthStateChange s'occupe de charger le rôle
+      // et de mettre à jour `user` dès que la session est active.
       return result;
     } catch (err: any) {
       // eslint-disable-next-line no-console
