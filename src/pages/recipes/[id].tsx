@@ -7,7 +7,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase } from "@/lib/supabaseClient";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
-import { difficultyTemplates } from "@/lib/recipesDifficulty";
+import { difficultyTemplates, chefTipsTemplates } from "@/lib/recipesDifficulty";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -75,6 +75,14 @@ const EditRecipePage = () => {
   const watchedImageUrl = watch("image_url");
   const watchedDifficulty = watch("difficulty");
   const watchedDifficultyDetailed = watch("difficulty_detailed");
+  const watchedChefTips = watch("chef_tips");
+  const watchedDietaryLabels = watch("dietary_labels");
+  const watchedNutritionalNotes = watch("nutritional_notes");
+  const watchedStorageModes = watch("storage_modes");
+  const watchedStorageDuration = watch("storage_duration_days");
+  const watchedStorageInstructions = watch("storage_instructions");
+  const watchedCuisine = watch("cuisine");
+  const watchedCulturalHistory = watch("cultural_history");
 
   useEffect(() => {
     if (!watchedTitle) return;
@@ -105,6 +113,169 @@ const EditRecipePage = () => {
       });
     }
   }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
+
+  useEffect(() => {
+    const difficulty = watchedDifficulty;
+    const tips = watchedChefTips;
+    if (!difficulty) return;
+    if (tips && tips.trim() !== "") {
+      return;
+    }
+    const template = chefTipsTemplates[difficulty];
+    if (template) {
+      setValue("chef_tips", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedChefTips, setValue]);
+
+  useEffect(() => {
+    const labels: string[] = watchedDietaryLabels ?? [];
+    const notes = watchedNutritionalNotes;
+    if (!labels.length) return;
+    if (notes && notes.trim() !== "") return;
+
+    const parts: string[] = [];
+
+    if (labels.includes("vegan")) {
+      parts.push("Recette adaptée à un régime végan.");
+    } else if (labels.includes("vegetalien")) {
+      parts.push("Recette adaptée à un régime végétalien.");
+    } else if (labels.includes("vegetarien")) {
+      parts.push("Recette adaptée à un régime végétarien.");
+    } else if (labels.includes("pescetarien")) {
+      parts.push("Recette adaptée à un régime pescetarien (poisson autorisé).");
+    }
+
+    if (labels.includes("sans_gluten")) {
+      parts.push(
+        "Sans gluten, sous réserve de vérifier la composition des ingrédients utilisés (farine, sauces, etc.)."
+      );
+    }
+    if (labels.includes("sans_lactose")) {
+      parts.push(
+        "Sans lactose si des produits laitiers sans lactose ou des alternatives végétales sont utilisés."
+      );
+    }
+    if (labels.includes("sans_oeuf")) {
+      parts.push("Sans œuf, convient aux personnes allergiques aux œufs.");
+    }
+    if (labels.includes("sans_arachide") || labels.includes("sans_fruits_a_coque")) {
+      parts.push(
+        "Formulée pour limiter les risques liés aux arachides et/ou fruits à coque, vérifier toujours les étiquettes."
+      );
+    }
+    if (labels.includes("sans_sucre_ajoute")) {
+      parts.push("Sans sucre ajouté, la douceur provient uniquement des ingrédients de base.");
+    }
+    if (labels.includes("sans_sel_ajoute")) {
+      parts.push("Sans sel ajouté, l’assaisonnement peut être ajusté au service selon les besoins.");
+    }
+    if (labels.includes("halal")) {
+      parts.push("Compatible avec un régime halal, sous réserve du choix des ingrédients.");
+    }
+    if (labels.includes("casher")) {
+      parts.push("Compatible avec un régime casher, sous réserve du contrôle des produits utilisés.");
+    }
+
+    if (!parts.length) return;
+
+    const text = parts.join(" ");
+    setValue("nutritional_notes", text, {
+      shouldDirty: true
+    });
+  }, [watchedDietaryLabels, watchedNutritionalNotes, setValue]);
+
+  useEffect(() => {
+    const modes: string[] = watchedStorageModes ?? [];
+    const duration = watchedStorageDuration;
+    const existing = watchedStorageInstructions;
+
+    if (!modes.length && (typeof duration !== "number" || Number.isNaN(duration))) {
+      return;
+    }
+    if (existing && existing.trim() !== "") {
+      return;
+    }
+
+    const modePhrases: string[] = [];
+    if (modes.includes("refrigerateur")) {
+      modePhrases.push("au réfrigérateur");
+    }
+    if (modes.includes("congelateur")) {
+      modePhrases.push("au congélateur");
+    }
+    if (modes.includes("ambiante")) {
+      modePhrases.push("à température ambiante");
+    }
+    if (modes.includes("sous_vide")) {
+      modePhrases.push("sous vide");
+    }
+    if (modes.includes("boite_hermetique")) {
+      modePhrases.push("dans une boîte hermétique");
+    }
+    if (modes.includes("au_choix")) {
+      modePhrases.push("dans le mode de conservation de votre choix");
+    }
+
+    const durationText =
+      typeof duration === "number" && !Number.isNaN(duration)
+        ? `${duration} jour${duration > 1 ? "s" : ""}`
+        : "";
+
+    let sentence = "";
+
+    if (durationText) {
+      sentence = `Se conserve idéalement jusqu’à ${durationText}`;
+      if (modePhrases.length) {
+        sentence += ` ${modePhrases.join(" et ")}`;
+      }
+      sentence += ".";
+    } else if (modePhrases.length) {
+      sentence = `Se conserve de préférence ${modePhrases.join(" et ")}.`;
+    }
+
+    if (!sentence) return;
+
+    setValue("storage_instructions", sentence, {
+      shouldDirty: true
+    });
+  }, [
+    watchedStorageModes,
+    watchedStorageDuration,
+    watchedStorageInstructions,
+    setValue
+  ]);
+
+  useEffect(() => {
+    const cuisine = (watchedCuisine || "").trim();
+    const existing = watchedCulturalHistory;
+    if (!cuisine) return;
+    if (existing && existing.trim() !== "") return;
+
+    const lower = cuisine.toLowerCase();
+    let text = "";
+
+    if (lower.includes("fran")) {
+      text =
+        "Cette recette s’inscrit dans la tradition française, en mettant en avant des produits simples de saison et une cuisson maîtrisée.";
+    } else if (lower.includes("ital")) {
+      text =
+        "Cette recette s’inspire de la cuisine italienne, axée sur quelques bons ingrédients travaillés avec simplicité et générosité.";
+    } else if (lower.includes("jap")) {
+      text =
+        "Cette recette évoque l’esprit de la cuisine japonaise, avec une attention particulière portée à l’équilibre des saveurs et des textures.";
+    } else if (lower.includes("medit") || lower.includes("médit")) {
+      text =
+        "Cette recette rappelle la cuisine méditerranéenne, riche en légumes, en herbes fraîches et en matières grasses de qualité.";
+    } else {
+      text = `Cette recette s’inspire de la cuisine ${cuisine}, en reprenant ses codes et ses produits emblématiques.`;
+    }
+
+    setValue("cultural_history", text, {
+      shouldDirty: true
+    });
+  }, [watchedCuisine, watchedCulturalHistory, setValue]);
 
   useEffect(() => {
     const fetchRecipe = async (recipeId: string) => {
