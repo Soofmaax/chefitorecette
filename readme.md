@@ -134,6 +134,7 @@ Affichage (via `src/app/admin/recipes/page.tsx`) :
   - `category`, `cuisine`, `difficulty`
   - `ingredients_text`, `instructions_detailed`
   - `chef_tips`, `cultural_history`, `techniques`, `difficulty_detailed`, `nutritional_notes`
+  - `dietary_labels` (régimes / contraintes alimentaires structurées)
   - `meta_title`, `meta_description`
   - `embedding` (optionnel, indicateur technique)
 
@@ -198,6 +199,7 @@ Fichier principal : `src/app/admin/recipes/[id]/edit/page.tsx`.
   - `status` (`draft`, `scheduled`, `published`)
   - `publish_at` (datetime-local)
   - `tags` (via `TagInput`)
+  - `dietary_labels` : régimes / contraintes alimentaires, sélectionnés via cases à cocher parmi une liste fermée (par ex. `vegetarien`, `sans_gluten`, `sans_sucre_ajoute`, `halal`, `casher`…). Une contrainte SQL garantit que seules ces valeurs françaises sont autorisées.
 
 Validation :
 

@@ -35,6 +35,27 @@ export const recipeSchema = z.object({
 
   tags: z.array(z.string()).default([]),
 
+  dietary_labels: z
+    .array(
+      z.enum([
+        "vegetarien",
+        "vegetalien",
+        "vegan",
+        "pescetarien",
+        "sans_gluten",
+        "sans_lactose",
+        "sans_oeuf",
+        "sans_arachide",
+        "sans_fruits_a_coque",
+        "sans_soja",
+        "sans_sucre_ajoute",
+        "sans_sel_ajoute",
+        "halal",
+        "casher"
+      ])
+    )
+    .default([]),
+
   status: z.enum(["draft", "scheduled", "published"]).default("draft"),
   publish_at: z
     .string()

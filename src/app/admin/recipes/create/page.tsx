@@ -62,6 +62,23 @@ const fetchEditorialRow = async (id: string) => {
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
 
+const DIETARY_LABEL_OPTIONS = [
+  { value: "vegetarien", label: "Végétarien" },
+  { value: "vegetalien", label: "Végétalien" },
+  { value: "vegan", label: "Vegan" },
+  { value: "pescetarien", label: "Pescétarien" },
+  { value: "sans_gluten", label: "Sans gluten" },
+  { value: "sans_lactose", label: "Sans lactose" },
+  { value: "sans_oeuf", label: "Sans œuf" },
+  { value: "sans_arachide", label: "Sans arachide" },
+  { value: "sans_fruits_a_coque", label: "Sans fruits à coque" },
+  { value: "sans_soja", label: "Sans soja" },
+  { value: "sans_sucre_ajoute", label: "Sans sucre ajouté" },
+  { value: "sans_sel_ajoute", label: "Sans sel ajouté" },
+  { value: "halal", label: "Halal" },
+  { value: "casher", label: "Casher" }
+];
+
 const AdminCreateRecipePage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,7 +96,7 @@ const AdminCreateRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm<RecipeFormValues>({
+  } = useForm&lt;RecipeFormValues&gt;({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
@@ -93,6 +110,7 @@ const AdminCreateRecipePage = () => {
       category: "",
       cuisine: "",
       tags: [],
+      dietary_labels: [],
       status: "draft",
       publish_at: "",
       ingredients_text: "",
@@ -225,6 +243,10 @@ const AdminCreateRecipePage = () => {
         category: values.category,
         cuisine: values.cuisine,
         tags: values.tags,
+        dietary_labels:
+          values.dietary_labels && values.dietary_labels.length > 0
+            ? values.dietary_labels
+            : null,
         status: "draft",
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -470,6 +492,51 @@ const AdminCreateRecipePage = () => {
               />
               {errors.tags && (
                 <p className="form-error">{errors.tags.message as string}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-4">
+              <label>Régimes / contraintes alimentaires</label>
+              <p className="mt-1 text-xs text-slate-500">
+                Sélectionne les régimes compatibles avec cette recette. Ces
+                valeurs sont contrôlées au niveau de la base (liste fermée).
+              </p>
+              <Controller
+                control={control}
+                name="dietary_labels"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {DIETARY_LABEL_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-xs text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+              {errors.dietary_labels && (
+                <p className="form-error">
+                  {errors.dietary_labels.message as string}
+                </p>
               )}
             </div>
           </div>

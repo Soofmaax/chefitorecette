@@ -18,11 +18,28 @@ import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEdi
 import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
 import { RecipeConceptsEditor } from "@/components/admin/RecipeConceptsEditor";
 
+const DIETARY_LABELS_OPTIONS = [
+  { value: "vegetarien", label: "Végétarien" },
+  { value: "vegetalien", label: "Végétalien" },
+  { value: "vegan", label: "Végan" },
+  { value: "pescetarien", label: "Pescetarien" },
+  { value: "sans_gluten", label: "Sans gluten" },
+  { value: "sans_lactose", label: "Sans lactose" },
+  { value: "sans_oeuf", label: "Sans œuf" },
+  { value: "sans_arachide", label: "Sans arachide" },
+  { value: "sans_fruits_a_coque", label: "Sans fruits à coque" },
+  { value: "sans_soja", label: "Sans soja" },
+  { value: "sans_sucre_ajoute", label: "Sans sucre ajouté" },
+  { value: "sans_sel_ajoute", label: "Sans sel ajouté" },
+  { value: "halal", label: "Halal" },
+  { value: "casher", label: "Casher" }
+] as const;
+
 const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
+      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
     )
     .eq("id", id)
     .single();
@@ -67,7 +84,7 @@ const fetchRecipeCuisines = async (): Promise<string[]> => {
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
 
-const difficultyTemplates: Record<string, string> = {
+const difficultyTemplates: Record&lt;string, string&gt; = {
   beginner:
     "Recette accessible aux débutants, avec peu d'étapes techniques. Le principal enjeu est de respecter les temps et les températures de cuisson.",
   intermediate:
@@ -75,6 +92,23 @@ const difficultyTemplates: Record<string, string> = {
   advanced:
     "Recette exigeante, avec plusieurs étapes techniques et une gestion fine des textures, des temps de repos et des températures."
 };
+
+const DIETARY_LABEL_OPTIONS = [
+  { value: "vegetarien", label: "Végétarien" },
+  { value: "vegetalien", label: "Végétalien" },
+  { value: "vegan", label: "Vegan" },
+  { value: "pescetarien", label: "Pescétarien" },
+  { value: "sans_gluten", label: "Sans gluten" },
+  { value: "sans_lactose", label: "Sans lactose" },
+  { value: "sans_oeuf", label: "Sans œuf" },
+  { value: "sans_arachide", label: "Sans arachide" },
+  { value: "sans_fruits_a_coque", label: "Sans fruits à coque" },
+  { value: "sans_soja", label: "Sans soja" },
+  { value: "sans_sucre_ajoute", label: "Sans sucre ajouté" },
+  { value: "sans_sel_ajoute", label: "Sans sel ajouté" },
+  { value: "halal", label: "Halal" },
+  { value: "casher", label: "Casher" }
+];
 
 const getPremiumMissing = (recipe: any): string[] => {
   const missing: string[] = [];
@@ -146,7 +180,7 @@ const AdminEditRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm<RecipeFormValues>({
+  } = useForm&lt;RecipeFormValues&gt;({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
@@ -160,6 +194,7 @@ const AdminEditRecipePage = () => {
       category: "",
       cuisine: "",
       tags: [],
+      dietary_labels: [],
       status: "draft",
       publish_at: "",
       ingredients_text: "",
@@ -280,6 +315,7 @@ const AdminEditRecipePage = () => {
         category: recipe.category ?? "",
         cuisine: recipe.cuisine ?? "",
         tags: (recipe.tags as string[]) ?? [],
+        dietary_labels: (recipe.dietary_labels as string[]) ?? [],
         status: recipe.status ?? "draft",
         publish_at: recipe.publish_at
           ? new Date(recipe.publish_at).toISOString().slice(0, 16)
@@ -488,6 +524,10 @@ const AdminEditRecipePage = () => {
         category: values.category,
         cuisine: values.cuisine,
         tags: values.tags,
+        dietary_labels:
+          values.dietary_labels && values.dietary_labels.length > 0
+            ? values.dietary_labels
+            : null,
         status: values.status,
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -1084,6 +1124,51 @@ const AdminEditRecipePage = () => {
               />
               {errors.tags && (
                 <p className="form-error">{errors.tags.message as string}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-4">
+              <label>Régimes / contraintes alimentaires</label>
+              <p className="mt-1 text-xs text-slate-500">
+                Sélectionne les régimes compatibles avec cette recette. Ces
+                valeurs sont contrôlées au niveau de la base (liste fermée).
+              </p>
+              <Controller
+                control={control}
+                name="dietary_labels"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {DIETARY_LABEL_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-xs text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+              {errors.dietary_labels && (
+                <p className="form-error">
+                  {errors.dietary_labels.message as string}
+                </p>
               )}
             </div>
           </div>
