@@ -128,6 +128,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase."
             );
             setUser(null);
+          } finally {
+            // Après tout changement d'état d'authentification,
+            // on considère que le chargement est terminé.
+            setLoading(false);
           }
         }
       );
@@ -153,6 +157,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     setError(null);
+    setLoading(true);
 
     try {
       const result = await supabase.auth.signInWithPassword({
@@ -160,9 +165,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password
       });
 
-      // On ne bloque plus la réponse sur le chargement du profil.
-      // Le listener onAuthStateChange s'occupe de charger le rôle
-      // et de mettre à jour `user` dès que la session est active.
+      // Si la connexion échoue (mauvais identifiants, etc.),
+      // Supabase renvoie une erreur mais ne déclenche pas forcément
+      // de changement d'état de session. On arrête donc le chargement ici.
+      if (result.error) {
+        setLoading(false);
+      }
+
       return result;
     } catch (err: any) {
       // eslint-disable-next-line no-console
@@ -170,6 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(
         "Erreur de configuration de l'authentification. Impossible de se connecter. Contactez un administrateur."
       );
+      setLoading(false);
 
       const error =
         err instanceof Error ? err : new Error(String(err ?? "Unknown error"));
