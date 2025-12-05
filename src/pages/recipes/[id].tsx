@@ -7,6 +7,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase } from "@/lib/supabaseClient";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
+import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -72,6 +73,8 @@ const EditRecipePage = () => {
   const watchedDescription = watch("description");
   const watchedIngredientsText = watch("ingredients_text");
   const watchedImageUrl = watch("image_url");
+  const watchedDifficulty = watch("difficulty");
+  const watchedDifficultyDetailed = watch("difficulty_detailed");
 
   useEffect(() => {
     if (!watchedTitle) return;
@@ -87,6 +90,21 @@ const EditRecipePage = () => {
       slugAutoRef.current = autoSlug;
     }
   }, [watchedTitle, watchedSlug, setValue]);
+
+  useEffect(() => {
+    const difficulty = watchedDifficulty;
+    const details = watchedDifficultyDetailed;
+    if (!difficulty) return;
+    if (details && details.trim() !== "") {
+      return;
+    }
+    const template = difficultyTemplates[difficulty];
+    if (template) {
+      setValue("difficulty_detailed", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
 
   useEffect(() => {
     const fetchRecipe = async (recipeId: string) => {
@@ -331,11 +349,25 @@ const EditRecipePage = () => {
             système RAG et le site public.
           </p>
         </div>
-        <Link href="/recipes" legacyBehavior>
-          <a>
-            <Button variant="secondary">Retour à la liste</Button>
-          </a>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/recipes" legacyBehavior>
+            <a>
+              <Button variant="secondary">Retour à la liste</Button>
+            </a>
+          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={() => {
+              if (typeof id === "string") {
+                router.push(`/recipes/new?fromId=${id}`);
+              }
+            }}
+          >
+            Nouvelle recette à partir de celle-ci
+          </Button>
+        </div>
       </div>
 
       <form

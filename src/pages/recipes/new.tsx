@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { recipeSchema, RecipeFormValues } from "@/types/forms";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "";
 import { supabase, getCurrentUser } from "@/lib/supabaseClient";
 import { cacheContentInRedis } from "@/lib/integrations";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
+import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "";
+
 const NewRecipePage = () => {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -64,11 +67,14 @@ const NewRecipePage = () => {
   });
 
   const slugAutoRef = useRef<string | null>(null);
+  const hasPrefilledFromIdRef = useRef(false);
   const watchedTitle = watch("title");
   const watchedSlug = watch("slug");
   const watchedDescription = watch("description");
   const watchedIngredientsText = watch("ingredients_text");
   const watchedImageUrl = watch("image_url");
+  const watchedDifficulty = watch("difficulty");
+  const watchedDifficultyDetailed = watch("difficulty_detailed");
 
   useEffect(() => {
     if (!watchedTitle) return;
@@ -84,6 +90,123 @@ const NewRecipePage = () => {
       slugAutoRef.current = autoSlug;
     }
   }, [watchedTitle, watchedSlug, setValue]);
+
+  useEffect(() => {
+    if (!watchedDifficulty) return;
+    if (watchedDifficultyDetailed && watchedDifficultyDetailed.trim() !== "") {
+      return;
+    }
+    const template = difficultyTemplates[watchedDifficulty];
+    if (template) {
+      setValue("difficulty_detailed", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
+
+  useEffect(() => {
+    if (hasPrefilledFromIdRef.current) return;
+    if (!router.isReady) return;
+
+    const fromId = router.query.fromId;
+    if (!fromId || typeof fromId !== "string") {
+      return;
+    }
+
+    const prefillFromRecipe = async (recipeId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("recipes")
+          .select(
+            "id, slug, title, description, image_url, prep_time_min, cook_time_min, rest_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, serving_temperatures, storage_modes, serving_temperature, meta_title, meta_description, canonical_url, og_image_url, schema_jsonld_enabled"
+          )
+          .eq("id", recipeId)
+          .single();
+
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error(error);
+          return;
+        }
+
+        if (!data) {
+          return;
+        }
+
+        const safeDietary =
+          (data.dietary_labels as RecipeFormValues["dietary_labels"]) ?? [];
+        const rawServingTemps =
+          (data.serving_temperatures as string[]) ??
+          (data.serving_temperature
+            ? [data.serving_temperature as string]
+            : []);
+        const safeServingTemps =
+          rawServingTemps.filter(
+            (v): v is RecipeFormValues["serving_temperatures"][number] =>
+              ["chaud", "tiede", "ambiante", "froid", "au_choix"].includes(v)
+          );
+        const rawStorageModes = (data.storage_modes as string[]) ?? [];
+        const safeStorageModes =
+          rawStorageModes.filter(
+            (v): v is RecipeFormValues["storage_modes"][number] =>
+              [
+                "refrigerateur",
+                "congelateur",
+                "ambiante",
+                "sous_vide",
+                "boite_hermetique",
+                "au_choix"
+              ].includes(v)
+          );
+
+        reset({
+          title: data.title ?? "",
+          slug: "",
+          description: data.description ?? "",
+          image_url: data.image_url ?? "",
+          prep_time_min: data.prep_time_min ?? 0,
+          cook_time_min: data.cook_time_min ?? 0,
+          rest_time_min: data.rest_time_min ?? 0,
+          servings: data.servings ?? 1,
+          difficulty:
+            (data.difficulty as RecipeFormValues["difficulty"]) ??
+            "beginner",
+          category:
+            (data.category as RecipeFormValues["category"]) ??
+            "plat_principal",
+          cuisine: data.cuisine ?? "",
+          tags: (data.tags as string[]) ?? [],
+          dietary_labels: safeDietary,
+          serving_temperatures: safeServingTemps,
+          storage_modes: safeStorageModes,
+          status: "draft",
+          publish_at: "",
+          ingredients_text: data.ingredients_text ?? "",
+          instructions_detailed: data.instructions_detailed ?? "",
+          chef_tips: data.chef_tips ?? "",
+          cultural_history: data.cultural_history ?? "",
+          techniques: data.techniques ?? "",
+          source_info: data.source_info ?? "",
+          difficulty_detailed: data.difficulty_detailed ?? "",
+          nutritional_notes: data.nutritional_notes ?? "",
+          storage_instructions: data.storage_instructions ?? "",
+          storage_duration_days: data.storage_duration_days ?? undefined,
+          meta_title: data.meta_title ?? "",
+          meta_description: data.meta_description ?? "",
+          canonical_url: data.canonical_url ?? "",
+          og_image_url: data.og_image_url ?? "",
+          schema_jsonld_enabled: data.schema_jsonld_enabled ?? false
+        });
+
+        hasPrefilledFromIdRef.current = true;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(err);
+      }
+    };
+
+    prefillFromRecipe(fromId);
+  }, [router.isReady, router.query, reset, setValue]);
 
   const onSubmit = async (values: RecipeFormValues) => {
     setMessage(null);
