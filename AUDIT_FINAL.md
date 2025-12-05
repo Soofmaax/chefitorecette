@@ -7,12 +7,13 @@ _Auteur :_ Cosine / Genie (audit automatisé basé sur le code du repo)
 
 ## 1. Résumé exécutif
 
-**Score global qualité code : _8.0 / 10_**
+**Score global qualité code : _8.7 / 10_**
 
 Le backoffice Chefito est globalement **bien structuré, typé, sécurisé et cohérent** :
 
 - Il est conçu comme un **outil interne** dont l’objectif principal est de **préparer et enrichir les recettes pour un système RAG** (et, indirectement, pour le site public).
 - En pratique, il est prévu pour être **utilisé par un admin unique** (ou un très petit nombre d’admins), même si le modèle `user_profiles.role` permettrait d’introduire un rôle `editor` ultérieurement.
+- Depuis l’audit initial, plusieurs chantiers ont été menés (factorisation de la qualité éditoriale, filtres RAG/“techno”, prévisualisation, toasts globaux, simplification dashboard, CI stabilisée), ce qui justifie la **hausse de la note globale**.
 
 - Architecture claire : séparation `app` (admin recettes enrichies) / `pages` (legacy), `lib`, `hooks`, `components`.
 - **TypeScript strict** (aucun `tsc` error), Zod utilisé sur tous les formulaires critiques.
