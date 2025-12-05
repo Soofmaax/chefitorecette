@@ -94,7 +94,39 @@ const EditRecipePage = () => {
         return;
       }
 
+      const safeDietary =
+        (data.dietary_labels as RecipeFormValues["dietary_labels"]) ?? [];
+      const rawServingTemps =
+        (data.serving_temperatures as string[]) ??
+        (data.serving_temperature ? [data.serving_temperature as string] : []);
+      const safeServingTemps =
+        rawServingTemps.filter((v): v is RecipeFormValues["serving_temperatures"][number] =>
+          ["chaud", "tiede", "ambiante", "froid", "au_choix"].includes(v)
+        );
+      const rawStorageModes = (data.storage_modes as string[]) ?? [];
+      const safeStorageModes =
+        rawStorageModes.filter((v): v is RecipeFormValues["storage_modes"][number] =>
+          ["refrigerateur", "congelateur", "ambiante", "sous_vide", "boite_hermetique", "au_choix"].includes(v)
+        );
+
       reset({
+        title: data.title ?? "",
+        slug: data.slug ?? "",
+        description: data.description ?? "",
+        image_url: data.image_url ?? "",
+        prep_time_min: data.prep_time_min ?? 0,
+        cook_time_min: data.cook_time_min ?? 0,
+        rest_time_min: data.rest_time_min ?? 0,
+        servings: data.servings ?? 1,
+        difficulty:
+          (data.difficulty as RecipeFormValues["difficulty"]) ?? "beginner",
+        category:
+          (data.category as RecipeFormValues["category"]) ?? "plat_principal",
+        cuisine: data.cuisine ?? "",
+        tags: (data.tags as string[]) ?? [],
+        dietary_labels: safeDietary,
+        serving_temperatures: safeServingTemps,
+        storage_modes: safeStorageModes,{
         title: data.title ?? "",
         slug: data.slug ?? "",
         description: data.description ?? "",

@@ -374,6 +374,22 @@ const AdminEditRecipePage = () => {
 
   useEffect(() => {
     if (recipe) {
+      const safeDietary =
+        (recipe.dietary_labels as RecipeFormValues["dietary_labels"]) ?? [];
+      const safeServingTempsRaw =
+        (recipe.serving_temperatures as string[]) ??
+        (recipe.serving_temperature ? [recipe.serving_temperature as string] : []);
+      const safeServingTemps =
+        safeServingTempsRaw.filter((v): v is RecipeFormValues["serving_temperatures"][number] =>
+          ["chaud", "tiede", "ambiante", "froid", "au_choix"].includes(v)
+        );
+      const safeStorageModesRaw =
+        (recipe.storage_modes as string[]) ?? [];
+      const safeStorageModes =
+        safeStorageModesRaw.filter((v): v is RecipeFormValues["storage_modes"][number] =>
+          ["refrigerateur", "congelateur", "ambiante", "sous_vide", "boite_hermetique", "au_choix"].includes(v)
+        );
+
       reset({
         title: recipe.title ?? "",
         slug: recipe.slug ?? "",
@@ -391,13 +407,9 @@ const AdminEditRecipePage = () => {
           "plat_principal",
         cuisine: recipe.cuisine ?? "",
         tags: (recipe.tags as string[]) ?? [],
-        dietary_labels: (recipe.dietary_labels as RecipeFormValues["dietary_labels"]) ?? [],
-        serving_temperatures:
-          (recipe.serving_temperatures as string[]) ??
-          (recipe.serving_temperature
-            ? [recipe.serving_temperature as string]
-            : []),
-        storage_modes: (recipe.storage_modes as string[]) ?? [],
+        dietary_labels: safeDietary,
+        serving_temperatures: safeServingTemps,
+        storage_modes: safeStorageModes,
         status: (recipe.status as RecipeFormValues["status"]) ?? "draft",
         publish_at: recipe.publish_at
           ? new Date(recipe.publish_at).toISOString().slice(0, 16)
