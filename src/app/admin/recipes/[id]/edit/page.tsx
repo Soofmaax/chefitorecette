@@ -77,22 +77,7 @@ type Utensil = {
   label: string;
 };
 
-const DIETARY_LABEL_OPTIONS = [
-  { value: "vegetarien", label: "Végétarien" },
-  { value: "vegetalien", label: "Végétalien" },
-  { value: "vegan", label: "Végan" },
-  { value: "pescetarien", label: "Pescetarien" },
-  { value: "sans_gluten", label: "Sans gluten" },
-  { value: "sans_lactose", label: "Sans lactose" },
-  { value: "sans_oeuf", label: "Sans œuf" },
-  { value: "sans_arachide", label: "Sans arachide" },
-  { value: "sans_fruits_a_coque", label: "Sans fruits à coque" },
-  { value: "sans_soja", label: "Sans soja" },
-  { value: "sans_sucre_ajoute", label: "Sans sucre ajouté" },
-  { value: "sans_sel_ajoute", label: "Sans sel ajouté" },
-  { value: "halal", label: "Halal" },
-  { value: "casher", label: "Casher" }
-] as const;
+
 
 const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
@@ -398,21 +383,22 @@ const AdminEditRecipePage = () => {
         cook_time_min: recipe.cook_time_min ?? 0,
         rest_time_min: recipe.rest_time_min ?? 0,
         servings: recipe.servings ?? 1,
-        difficulty: recipe.difficulty ?? "beginner",
+        difficulty:
+          (recipe.difficulty as RecipeFormValues["difficulty"]) ??
+          "beginner",
         category:
-          recipe.category && CATEGORY_LABEL_TO_KEY[recipe.category]
-            ? CATEGORY_LABEL_TO_KEY[recipe.category]
-            : recipe.category ?? "plat_principal",
+          (recipe.category as RecipeFormValues["category"]) ??
+          "plat_principal",
         cuisine: recipe.cuisine ?? "",
         tags: (recipe.tags as string[]) ?? [],
-        dietary_labels: (recipe.dietary_labels as string[]) ?? [],
+        dietary_labels: (recipe.dietary_labels as RecipeFormValues["dietary_labels"]) ?? [],
         serving_temperatures:
           (recipe.serving_temperatures as string[]) ??
           (recipe.serving_temperature
             ? [recipe.serving_temperature as string]
             : []),
         storage_modes: (recipe.storage_modes as string[]) ?? [],
-        status: recipe.status ?? "draft",
+        status: (recipe.status as RecipeFormValues["status"]) ?? "draft",
         publish_at: recipe.publish_at
           ? new Date(recipe.publish_at).toISOString().slice(0, 16)
           : "",

@@ -186,22 +186,47 @@ const AdminCreateRecipePage = () => {
 
   useEffect(() => {
     if (editorialRow) {
-      reset((prev) => ({
-        ...prev,
-        title: editorialRow.title ?? prev.title,
-        category:
-          editorialRow.category &&
-          CATEGORY_LABEL_TO_KEY[editorialRow.category]
-            ? CATEGORY_LABEL_TO_KEY[editorialRow.category]
-            : prev.category,
-        difficulty: (editorialRow.difficulty as any) ?? prev.difficulty,
-        tags: (editorialRow.tags as string[]) ?? prev.tags,
+      reset({
+        title: editorialRow.title ?? "",
+        slug: "",
         description:
           (editorialRow.chefito_angle as string) ??
-          prev.description ??
           "",
-        status: "draft"
-      }));
+        image_url: "",
+        prep_time_min: 0,
+        cook_time_min: 0,
+        rest_time_min: 0,
+        servings: 1,
+        difficulty:
+          (editorialRow.difficulty as RecipeFormValues["difficulty"]) ??
+          "beginner",
+        category:
+          (editorialRow.category &&
+            CATEGORY_LABEL_TO_KEY[editorialRow.category]) ||
+          "plat_principal",
+        cuisine: "",
+        tags: (editorialRow.tags as string[]) ?? [],
+        dietary_labels: [],
+        serving_temperatures: [],
+        storage_modes: [],
+        status: "draft",
+        publish_at: "",
+        ingredients_text: "",
+        instructions_detailed: "",
+        chef_tips: "",
+        cultural_history: "",
+        techniques: "",
+        source_info: "",
+        difficulty_detailed: "",
+        nutritional_notes: "",
+        storage_instructions: "",
+        storage_duration_days: undefined,
+        meta_title: "",
+        meta_description: "",
+        canonical_url: "",
+        og_image_url: "",
+        schema_jsonld_enabled: false
+      });
     }
   }, [editorialRow, reset]);
 
