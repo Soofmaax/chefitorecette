@@ -18,6 +18,65 @@ import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEdi
 import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
 import { RecipeConceptsEditor } from "@/components/admin/RecipeConceptsEditor";
 
+const RECIPE_CATEGORY_OPTIONS = [
+  { value: "entree", label: "Entrée" },
+  { value: "plat_principal", label: "Plat principal" },
+  { value: "accompagnement", label: "Accompagnement" },
+  { value: "dessert", label: "Dessert" },
+  { value: "aperitif", label: "Apéritif" },
+  { value: "gateau", label: "Gâteau" },
+  { value: "boisson", label: "Boisson" },
+  { value: "sauce", label: "Sauce" },
+  { value: "test", label: "Test" }
+] as const;
+
+const CATEGORY_LABEL_TO_KEY: Record<string, string> = {
+  Entrée: "entree",
+  Entree: "entree",
+  entree: "entree",
+  "Plat principal": "plat_principal",
+  "plat principal": "plat_principal",
+  plat_principal: "plat_principal",
+  Accompagnement: "accompagnement",
+  accompagnement: "accompagnement",
+  Dessert: "dessert",
+  dessert: "dessert",
+  "Apéritif": "aperitif",
+  Aperitif: "aperitif",
+  aperitif: "aperitif",
+  "Gâteau": "gateau",
+  Gateau: "gateau",
+  gateau: "gateau",
+  Boisson: "boisson",
+  boisson: "boisson",
+  Sauce: "sauce",
+  sauce: "sauce",
+  Test: "test",
+  test: "test"
+};
+
+const SERVING_TEMPERATURE_OPTIONS = [
+  { value: "chaud", label: "Chaude" },
+  { value: "tiede", label: "Tiède" },
+  { value: "ambiante", label: "Température ambiante" },
+  { value: "froid", label: "Froide" },
+  { value: "au_choix", label: "Au choix" }
+] as const;
+
+const STORAGE_MODE_OPTIONS = [
+  { value: "refrigerateur", label: "Réfrigérateur" },
+  { value: "congelateur", label: "Congélateur" },
+  { value: "ambiante", label: "Ambiante" },
+  { value: "sous_vide", label: "Sous vide" },
+  { value: "boite_hermetique", label: "Boîte hermétique" },
+  { value: "au_choix", label: "Au choix" }
+] as const;
+
+type Utensil = {
+  key: string;
+  label: string;
+};
+
 const DIETARY_LABELS_OPTIONS = [
   { value: "vegetarien", label: "Végétarien" },
   { value: "vegetalien", label: "Végétalien" },
@@ -39,7 +98,7 @@ const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, slug, title, description, image_url, prep_time_min, cook_time_min, rest_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, serving_temperature, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
+      "id, slug, title, description, image_url, prep_time_min, cook_time_min, rest_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, serving_temperatures, storage_modes, serving_temperature, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
     )
     .eq("id", id)
     .single();
@@ -49,21 +108,6 @@ const fetchRecipeById = async (id: string) => {
   }
 
   return data;
-};
-
-const fetchRecipeCategories = async (): Promise<string[]> => {
-  const { data, error } = await supabase.from("recipes").select("category");
-
-  if (error) {
-    throw error;
-  }
-
-  const rows = (data as { category: string | null }[]) ?? [];
-  const values = rows
-    .map((r) => r.category)
-    .filter((c): c is string => !!c && c.trim() !== "");
-
-  return Array.from(new Set(values)).sort();
 };
 
 const fetchRecipeCuisines = async (): Promise<string[]> => {
@@ -192,10 +236,12 @@ const AdminEditRecipePage = () => {
       rest_time_min: 0,
       servings: 1,
       difficulty: "beginner",
-      category: "",
+      category: "plat_principal",
       cuisine: "",
       tags: [],
       dietary_labels: [],
+      serving_temperatures: [],
+      storage_modes: [],
       status: "draft",
       publish_at: "",
       ingredients_text: "",
@@ -208,7 +254,6 @@ const AdminEditRecipePage = () => {
       nutritional_notes: "",
       storage_instructions: "",
       storage_duration_days: undefined,
-      serving_temperature: undefined,
       meta_title: "",
       meta_description: "",
       canonical_url: "",
@@ -305,6 +350,48 @@ const AdminEditRecipePage = () => {
     enabled: !!id
   });
 
+  const { data: utensilsCatalog = [] } = useQuery({
+    queryKey: ["utensils-catalog"],
+    queryFn: async (): Promise<Utensil[]> => {
+      const { data, error } = await supabase
+        .from("utensils_catalog")
+        .select("key, label")
+        .order("label", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as Utensil[]) ?? [];
+    }
+  });
+
+  const { data: recipeUtensils = [] } = useQuery({
+    queryKey: ["recipe-utensils", id],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("recipe_utensils")
+        .select("utensil_key")
+        .eq("recipe_id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = (data as { utensil_key: string }[]) ?? [];
+      return rows.map((r) => r.utensil_key);
+    },
+    enabled: !!id
+  });
+
+  const [selectedUtensils, setSelectedUtensils] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (recipeUtensils) {
+      setSelectedUtensils(recipeUtensils);
+    }
+  }, [recipeUtensils]);
+
   useEffect(() => {
     if (recipe) {
       reset({
@@ -317,10 +404,19 @@ const AdminEditRecipePage = () => {
         rest_time_min: recipe.rest_time_min ?? 0,
         servings: recipe.servings ?? 1,
         difficulty: recipe.difficulty ?? "beginner",
-        category: recipe.category ?? "",
+        category:
+          recipe.category && CATEGORY_LABEL_TO_KEY[recipe.category]
+            ? CATEGORY_LABEL_TO_KEY[recipe.category]
+            : recipe.category ?? "plat_principal",
         cuisine: recipe.cuisine ?? "",
         tags: (recipe.tags as string[]) ?? [],
         dietary_labels: (recipe.dietary_labels as string[]) ?? [],
+        serving_temperatures:
+          (recipe.serving_temperatures as string[]) ??
+          (recipe.serving_temperature
+            ? [recipe.serving_temperature as string]
+            : []),
+        storage_modes: (recipe.storage_modes as string[]) ?? [],
         status: recipe.status ?? "draft",
         publish_at: recipe.publish_at
           ? new Date(recipe.publish_at).toISOString().slice(0, 16)
@@ -335,7 +431,6 @@ const AdminEditRecipePage = () => {
         nutritional_notes: recipe.nutritional_notes ?? "",
         storage_instructions: recipe.storage_instructions ?? "",
         storage_duration_days: recipe.storage_duration_days ?? undefined,
-        serving_temperature: recipe.serving_temperature ?? undefined,
         meta_title: recipe.meta_title ?? "",
         meta_description: recipe.meta_description ?? "",
         canonical_url: recipe.canonical_url ?? "",
@@ -537,6 +632,15 @@ const AdminEditRecipePage = () => {
           values.dietary_labels && values.dietary_labels.length > 0
             ? values.dietary_labels
             : null,
+        serving_temperatures:
+          values.serving_temperatures &&
+          values.serving_temperatures.length > 0
+            ? values.serving_temperatures
+            : null,
+        storage_modes:
+          values.storage_modes && values.storage_modes.length > 0
+            ? values.storage_modes
+            : null,
         status: values.status,
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -552,7 +656,7 @@ const AdminEditRecipePage = () => {
           typeof values.storage_duration_days === "number"
             ? values.storage_duration_days
             : null,
-        serving_temperature: values.serving_temperature || null,
+        serving_temperature: null,
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
@@ -567,6 +671,28 @@ const AdminEditRecipePage = () => {
 
       if (error) {
         throw error;
+      }
+
+      // Synchroniser les ustensiles
+      const { error: deleteError } = await supabase
+        .from("recipe_utensils")
+        .delete()
+        .eq("recipe_id", id);
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      if (selectedUtensils.length > 0) {
+        const rows = selectedUtensils.map((utensilKey) => ({
+          recipe_id: id,
+          utensil_key: utensilKey
+        }));
+        const { error: insertError } = await supabase
+          .from("recipe_utensils")
+          .insert(rows);
+        if (insertError) {
+          throw insertError;
+        }
       }
 
       setMessage(
@@ -667,11 +793,7 @@ const AdminEditRecipePage = () => {
     () => (recipe ? getRecipeMissingFields(recipe) : []),
     [recipe]
   );
-  const isComplete = missingFields.length === 0;emiumMissing = useMemo(
-    () => (recipe ? getPremiumMissing(recipe) : []),
-    [recipe]
-  );
-  const isComplete = premiumMissing.length === 0;
+  const isComplete = missingFields.length === 0;
 
   const jsonLdObject = useMemo(() => {
     if (!recipe) return null;
@@ -979,15 +1101,18 @@ const AdminEditRecipePage = () => {
             </div>
 
             <div>
-              <label htmlFor="category">Catégorie</label>
-              <input
+              <label htmlFor="category">Type de plat</label>
+              <select
                 id="category"
-                type="text"
-                list="recipe-categories-options"
                 className="mt-1 w-full"
-                placeholder="dessert, plat principal…"
                 {...register("category")}
-              />
+              >
+                {RECIPE_CATEGORY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
               {errors.category && (
                 <p className="form-error">{errors.category.message}</p>
               )}
@@ -1022,11 +1147,6 @@ const AdminEditRecipePage = () => {
               )}
             </div>
           </div>
-          <datalist id="recipe-categories-options">
-            {allCategories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
           <datalist id="recipe-cuisines-options">
             {allCuisines.map((c) => (
               <option key={c} value={c} />
@@ -1233,20 +1353,78 @@ const AdminEditRecipePage = () => {
               )}
             </div>
             <div>
-              <label htmlFor="serving_temperature">
+              <p className="mb-1 text-xs font-semibold text-slate-200">
                 Température de service
-              </label>
-              <select
-                id="serving_temperature"
-                className="mt-1 w-full"
-                {...register("serving_temperature")}
-              >
-                <option value="">—</option>
-                <option value="chaud">Chaude</option>
-                <option value="tiede">Tiède</option>
-                <option value="ambiante">À température ambiante</option>
-                <option value="froid">Froide / réfrigérée</option>
-              </select>
+              </p>
+              <Controller
+                control={control}
+                name="serving_temperatures"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                      {SERVING_TEMPERATURE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-slate-200">
+                Modes de conservation
+              </p>
+              <Controller
+                control={control}
+                name="storage_modes"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                      {STORAGE_MODE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
             </div>
             <div className="md:col-span-3">
               <label htmlFor="storage_instructions">
@@ -1263,10 +1441,52 @@ const AdminEditRecipePage = () => {
           </div>
         </section>
 
-        {/* Onglet 3 : Texte détaillé & enrichissement */}
+        {/* Onglet 3 : Ustensiles / matériel */}
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            3. Texte détaillé &amp; enrichissement
+            3. Ustensiles / matériel
+          </h2>
+          <p className="text-xs text-slate-500">
+            Sélectionne les ustensiles et équipements importants nécessaires pour
+            réaliser la recette (four, airfryer, Thermomix, etc.).
+          </p>
+          <div className="flex flex-wrap gap-3 text-xs">
+            {utensilsCatalog.length === 0 ? (
+              <p className="text-slate-500">
+                Aucun ustensile n&apos;est encore défini dans le catalogue.
+              </p>
+            ) : (
+              utensilsCatalog.map((utensil) => {
+                const checked = selectedUtensils.includes(utensil.key);
+                return (
+                  <label
+                    key={utensil.key}
+                    className="inline-flex items-center gap-2 text-slate-200"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-primary-500"
+                      checked={checked}
+                      onChange={() => {
+                        setSelectedUtensils((prev) =>
+                          prev.includes(utensil.key)
+                            ? prev.filter((k) => k !== utensil.key)
+                            : [...prev, utensil.key]
+                        );
+                      }}
+                    />
+                    <span>{utensil.label}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* Onglet 4 : Texte détaillé & enrichissement */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            4. Texte détaillé &amp; enrichissement
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">

@@ -40,14 +40,41 @@ export const recipeSchema = z.object({
 
   storage_instructions: z.string().optional().or(z.literal("")),
 
-  serving_temperature: z
-    .enum(["chaud", "tiede", "ambiante", "froid"])
-    .optional(),
+  serving_temperatures: z
+    .array(
+      z.enum(["chaud", "tiede", "ambiante", "froid", "au_choix"])
+    )
+    .default([]),
+
+  storage_modes: z
+    .array(
+      z.enum([
+        "refrigerateur",
+        "congelateur",
+        "ambiante",
+        "sous_vide",
+        "boite_hermetique",
+        "au_choix"
+      ])
+    )
+    .default([]),
 
   difficulty: z.enum(["beginner", "intermediate", "advanced"], {
     required_error: "Difficulté requise"
   }),
-  category: z.string().min(1, "Catégorie requise"),
+  category: z
+    .enum([
+      "entree",
+      "plat_principal",
+      "accompagnement",
+      "dessert",
+      "aperitif",
+      "gateau",
+      "boisson",
+      "sauce",
+      "test"
+    ])
+    .default("plat_principal"),
   cuisine: z.string().min(1, "Cuisine requise"),
 
   tags: z.array(z.string()).default([]),

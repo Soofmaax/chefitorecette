@@ -13,19 +13,41 @@ import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
-const fetchRecipeCategories = async (): Promise<string[]> => {
-  const { data, error } = await supabase.from("recipes").select("category");
+const RECIPE_CATEGORY_OPTIONS = [
+  { value: "entree", label: "Entrée" },
+  { value: "plat_principal", label: "Plat principal" },
+  { value: "accompagnement", label: "Accompagnement" },
+  { value: "dessert", label: "Dessert" },
+  { value: "aperitif", label: "Apéritif" },
+  { value: "gateau", label: "Gâteau" },
+  { value: "boisson", label: "Boisson" },
+  { value: "sauce", label: "Sauce" },
+  { value: "test", label: "Test" }
+] as const;
 
-  if (error) {
-    throw error;
-  }
-
-  const rows = (data as { category: string | null }[]) ?? [];
-  const values = rows
-    .map((r) => r.category)
-    .filter((c): c is string => !!c && c.trim() !== "");
-
-  return Array.from(new Set(values)).sort();
+const CATEGORY_LABEL_TO_KEY: Record<string, string> = {
+  Entrée: "entree",
+  Entree: "entree",
+  entree: "entree",
+  "Plat principal": "plat_principal",
+  "plat principal": "plat_principal",
+  plat_principal: "plat_principal",
+  Accompagnement: "accompagnement",
+  accompagnement: "accompagnement",
+  Dessert: "dessert",
+  dessert: "dessert",
+  "Apéritif": "aperitif",
+  Aperitif: "aperitif",
+  aperitif: "aperitif",
+  "Gâteau": "gateau",
+  Gateau: "gateau",
+  gateau: "gateau",
+  Boisson: "boisson",
+  boisson: "boisson",
+  Sauce: "sauce",
+  sauce: "sauce",
+  Test: "test",
+  test: "test"
 };
 
 const fetchRecipeCuisines = async (): Promise<string[]> => {
@@ -61,6 +83,23 @@ const fetchEditorialRow = async (id: string) => {
 
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
+
+const SERVING_TEMPERATURE_OPTIONS = [
+  { value: "chaud", label: "Chaude" },
+  { value: "tiede", label: "Tiède" },
+  { value: "ambiante", label: "Température ambiante" },
+  { value: "froid", label: "Froide" },
+  { value: "au_choix", label: "Au choix" }
+] as const;
+
+const STORAGE_MODE_OPTIONS = [
+  { value: "refrigerateur", label: "Réfrigérateur" },
+  { value: "congelateur", label: "Congélateur" },
+  { value: "ambiante", label: "Ambiante" },
+  { value: "sous_vide", label: "Sous vide" },
+  { value: "boite_hermetique", label: "Boîte hermétique" },
+  { value: "au_choix", label: "Au choix" }
+] as const;
 
 const DIETARY_LABEL_OPTIONS = [
   { value: "vegetarien", label: "Végétarien" },
@@ -108,10 +147,12 @@ const AdminCreateRecipePage = () => {
       rest_time_min: 0,
       servings: 1,
       difficulty: "beginner",
-      category: "",
+      category: "plat_principal",
       cuisine: "",
       tags: [],
       dietary_labels: [],
+      serving_temperatures: [],
+      storage_modes: [],
       status: "draft",
       publish_at: "",
       ingredients_text: "",
@@ -124,18 +165,12 @@ const AdminCreateRecipePage = () => {
       nutritional_notes: "",
       storage_instructions: "",
       storage_duration_days: undefined,
-      serving_temperature: undefined,
       meta_title: "",
       meta_description: "",
       canonical_url: "",
       og_image_url: "",
       schema_jsonld_enabled: false
     }
-  });
-
-  const { data: allCategories = [] } = useQuery({
-    queryKey: ["recipes-categories-all"],
-    queryFn: fetchRecipeCategories
   });
 
   const { data: allCuisines = [] } = useQuery({
@@ -154,7 +189,11 @@ const AdminCreateRecipePage = () => {
       reset((prev) => ({
         ...prev,
         title: editorialRow.title ?? prev.title,
-        category: editorialRow.category ?? prev.category,
+        category:
+          editorialRow.category &&
+          CATEGORY_LABEL_TO_KEY[editorialRow.category]
+            ? CATEGORY_LABEL_TO_KEY[editorialRow.category]
+            : prev.category,
         difficulty: (editorialRow.difficulty as any) ?? prev.difficulty,
         tags: (editorialRow.tags as string[]) ?? prev.tags,
         description:
@@ -252,6 +291,15 @@ const AdminCreateRecipePage = () => {
           values.dietary_labels && values.dietary_labels.length > 0
             ? values.dietary_labels
             : null,
+        serving_temperatures:
+          values.serving_temperatures &&
+          values.serving_temperatures.length > 0
+            ? values.serving_temperatures
+            : null,
+        storage_modes:
+          values.storage_modes && values.storage_modes.length > 0
+            ? values.storage_modes
+            : null,
         status: "draft",
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -267,7 +315,7 @@ const AdminCreateRecipePage = () => {
           typeof values.storage_duration_days === "number"
             ? values.storage_duration_days
             : null,
-        serving_temperature: values.serving_temperature || null,
+        serving_temperature: null,
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
@@ -372,15 +420,18 @@ const AdminCreateRecipePage = () => {
             </div>
 
             <div>
-              <label htmlFor="category">Catégorie</label>
-              <input
+              <label htmlFor="category">Type de plat</label>
+              <select
                 id="category"
-                type="text"
-                list="recipe-categories-options"
                 className="mt-1 w-full"
-                placeholder="dessert, plat principal…"
                 {...register("category")}
-              />
+              >
+                {RECIPE_CATEGORY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
               {errors.category && (
                 <p className="form-error">{errors.category.message}</p>
               )}
@@ -415,11 +466,6 @@ const AdminCreateRecipePage = () => {
               )}
             </div>
           </div>
-          <datalist id="recipe-categories-options">
-            {allCategories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
           <datalist id="recipe-cuisines-options">
             {allCuisines.map((c) => (
               <option key={c} value={c} />
@@ -471,6 +517,20 @@ const AdminCreateRecipePage = () => {
               />
               {errors.servings && (
                 <p className="form-error">{errors.servings.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="rest_time_min">Repos (min)</label>
+              <input
+                id="rest_time_min"
+                type="number"
+                className="mt-1 w-full"
+                min={0}
+                {...register("rest_time_min", { valueAsNumber: true })}
+              />
+              {errors.rest_time_min && (
+                <p className="form-error">{errors.rest_time_min.message}</p>
               )}
             </div>
 

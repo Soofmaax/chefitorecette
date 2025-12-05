@@ -116,13 +116,14 @@ Cette logique est utilisée :
 Affichage (via `src/app/admin/recipes/page.tsx`) :
 
 - Données principales (`AdminRecipe`) issues de `recipes` :
-  - `title`, `slug`, `status`, `description`, `image_url`
-  - `category`, `cuisine`, `difficulty`
-  - `ingredients_text`, `instructions_detailed`
-  - `chef_tips`, `cultural_history`, `techniques`, `difficulty_detailed`, `nutritional_notes`
-  - `dietary_labels` (régimes / contraintes alimentaires structurées)
-  - `meta_title`, `meta_description`
-  - `embedding` (optionnel, indicateur technique)
+  - Identité & base : `title`, `slug`, `status`, `description`, `image_url`
+  - Typage : `category` (type de plat structuré), `cuisine`, `difficulty`
+  - Temps (en minutes) : `prep_time_min`, `cook_time_min`, `rest_time_min`, `servings`
+  - Contenu éditorial : `ingredients_text`, `instructions_detailed`, `chef_tips`, `cultural_history`, `techniques`, `difficulty_detailed`, `nutritional_notes`
+  - Conservation & service : `storage_instructions`, `storage_duration_days`, `storage_modes` (modes structurés), `serving_temperatures` (températures de service structurées)
+  - Régimes : `dietary_labels` (régimes / contraintes alimentaires structurées)
+  - SEO : `meta_title`, `meta_description`, `canonical_url`, `og_image_url`
+  - Technique : `embedding` (optionnel, indicateur technique)
 
 Fonctionnalités :
 
