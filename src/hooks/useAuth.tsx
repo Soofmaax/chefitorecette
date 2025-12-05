@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
 
-      const timeoutMs = 5000;
+      const timeoutMs = 2000;
 
       try {
         const getSessionPromise = supabase.auth.getSession();
@@ -88,17 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
       } catch (err) {
-        // Ce bloc intercepte notamment l'erreur "Supabase client non configuré"
-        // lorsque les variables d'environnement ne sont pas définies.
-        // eslint-disable-next-line no-console
-        console.error("[Auth] Erreur d'initialisation de la session", err);
-
         if (err instanceof Error && err.message === "getSession timeout") {
           // Si la récupération de la session prend trop de temps,
           // on considère qu'il n'y a pas de session valide et on
           // laisse l'utilisateur se reconnecter sans bloquer l'UI.
           setError(null);
         } else {
+          // Ce bloc intercepte notamment l'erreur "Supabase client non configuré"
+          // lorsque les variables d'environnement ne sont pas définies.
+          // eslint-disable-next-line no-console
+          console.error("[Auth] Erreur d'initialisation de la session", err);
           setError(
             "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)."
           );
