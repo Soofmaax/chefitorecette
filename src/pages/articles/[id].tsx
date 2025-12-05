@@ -53,7 +53,8 @@ const EditArticlePage = () => {
           "id, slug, title, excerpt, content_html, cover_image_url, tags, category, status, published_at, cache_key, content_text, rag_metadata"
         )
         .eq("id", articleId)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
         // eslint-disable-next-line no-console
