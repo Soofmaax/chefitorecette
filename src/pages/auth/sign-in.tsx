@@ -54,14 +54,44 @@ const SignInPage = () => {
       }
     }
 
-    const { error } = await signInWithEmail(values.email, values.password);
-    if (error) {
-      // Message volontairement générique pour ne pas donner d'indication
-      // sur l'existence du compte ou la nature de l'erreur.
-      setErrorMessage("Identifiants invalides. Merci de réessayer.");
-      return;
+    const timeoutMs = 8000;
+
+    try {
+      const result = await Promise.race([
+        signInWithEmail(values.email, values.password),
+        new Promise<{ data: null; error: Error }>((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: null,
+                error: new Error("signIn timeout")
+              }),
+            timeoutMs
+          )
+        )
+      ]);
+
+      if (result.error) {
+        // Message volontairement générique pour ne pas donner d'indication
+        // sur l'existence du compte ou la nature de l'erreur.
+        const isTimeoutError =
+          result.error instanceof Error &&
+          result.error.message === "signIn timeout";
+
+        setErrorMessage(
+          isTimeoutError
+            ? "La connexion est trop lente. Merci de réessayer."
+            : "Identifiants invalides. Merci de réessayer."
+        );
+        return;
+      }
+
+      router.replace("/dashboard");
+    } catch {
+      setErrorMessage(
+        "Une erreur est survenue pendant la connexion. Merci de réessayer."
+      );
     }
-    router.replace("/dashboard");
   };
 
   return (
