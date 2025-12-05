@@ -58,7 +58,13 @@ const SignInPage = () => {
     setAuthSubmitting(true);
 
     try {
+      // eslint-disable-next-line no-console
+      console.log("[SignIn] onSubmit start", { email: values.email });
+
       const { error } = await signInWithEmail(values.email, values.password);
+
+      // eslint-disable-next-line no-console
+      console.log("[SignIn] signInWithEmail resolved", { error });
 
       if (error) {
         // Message volontairement générique pour ne pas donner d'indication
@@ -68,12 +74,16 @@ const SignInPage = () => {
       }
 
       router.replace("/dashboard");
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[SignIn] onSubmit error", err);
       setErrorMessage(
         "Une erreur est survenue pendant la connexion. Merci de réessayer."
       );
     } finally {
       setAuthSubmitting(false);
+      // eslint-disable-next-line no-console
+      console.log("[SignIn] onSubmit finally");
     }
   };
 
