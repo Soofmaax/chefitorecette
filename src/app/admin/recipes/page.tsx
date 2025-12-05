@@ -143,7 +143,7 @@ const getPremiumMissing = (recipe: AdminRecipe): string[] => {
   return missing;
 };
 
-const isEnrichedPremium = (recipe: AdminRecipe): boolean => {
+const isCompleteRecipe = (recipe: AdminRecipe): boolean => {
   return getPremiumMissing(recipe).length === 0;
 };
 
@@ -470,8 +470,8 @@ const AdminRecipesPage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-            Recettes – Mode premium
-          </h1>
+          Recettes – Mode enrichi
+        </h1>
           <p className="mt-1 text-sm text-slate-400">
             Filtrez et enrichissez les recettes existantes avec des contenus
             premium (science, audio, SEO).

@@ -652,7 +652,7 @@ const AdminEditRecipePage = () => {
     () => (recipe ? getPremiumMissing(recipe) : []),
     [recipe]
   );
-  const isPremium = premiumMissing.length === 0;
+  const isComplete = premiumMissing.length === 0;
 
   const jsonLdObject = useMemo(() => {
     if (!recipe) return null;
@@ -744,7 +744,7 @@ const AdminEditRecipePage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-            Édition recette – Mode premium
+            Édition recette – fiche enrichie
           </h1>
           <p className="mt-1 text-sm text-slate-400">
             Organisez les informations de base, les ingrédients, les étapes
@@ -772,22 +772,22 @@ const AdminEditRecipePage = () => {
         </div>
       </div>
 
-      {/* Panneau d'actions rapides & statut premium */}
+      {/* Panneau d'actions rapides & qualité éditoriale */}
       <section className="card space-y-4 px-5 py-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-              Statut premium
+              Qualité éditoriale
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Qualité actuelle:{" "}
-              {isPremium ? (
+              Niveau actuel:{" "}
+              {isComplete ? (
                 <span className="font-semibold text-emerald-300">
-                  recette premium
+                  recette complète
                 </span>
               ) : (
                 <span className="font-semibold text-amber-300">
-                  à enrichir pour être premium
+                  recette à enrichir
                 </span>
               )}
             </p>

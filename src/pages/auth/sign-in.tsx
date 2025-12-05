@@ -36,7 +36,9 @@ const SignInPage = () => {
     setErrorMessage(null);
     const { error } = await signInWithEmail(values.email, values.password);
     if (error) {
-      setErrorMessage(error.message);
+      // Message volontairement générique pour ne pas donner d'indication
+      // sur l'existence du compte ou la nature de l'erreur.
+      setErrorMessage("Identifiants invalides. Merci de réessayer.");
       return;
     }
     router.replace("/dashboard");
@@ -46,10 +48,10 @@ const SignInPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-950 to-slate-900 px-4">
       <div className="card w-full max-w-md px-6 py-6">
         <h1 className="mb-2 text-lg font-semibold tracking-tight text-slate-100">
-          Connexion à l’interface RAG
+          Connexion à l’espace d’administration
         </h1>
         <p className="mb-6 text-sm text-slate-400">
-          Connectez-vous avec votre compte Supabase (rôle admin ou éditeur).
+          Connectez-vous avec vos identifiants d’administrateur ou d’éditeur.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -122,15 +124,7 @@ const SignInPage = () => {
           </Link>
         </div>
 
-        <p className="mt-6 text-xs text-slate-500">
-          L’authentification s’appuie sur Supabase Auth. Vérifiez que vos
-          utilisateurs et profils sont correctement configurés dans la table{" "}
-          <code className="rounded bg-slate-800/80 px-1">
-            user_profiles
-          </code>
-          .
-        </p>
-      </div>
+        </div>
     </div>
   );
 };

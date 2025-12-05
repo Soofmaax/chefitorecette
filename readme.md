@@ -1,4 +1,4 @@
-# Backoffice Chefito – Admin premium recettes
+# Backoffice Chefito – Admin recettes enrichies
 
 ![CI](https://github.com/Soofmaax/chefitorecette/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/status-private-informational)
@@ -9,17 +9,16 @@
 Ce projet combine :
 
 - Un backoffice historique minimal (pages router) pour certaines opérations.
-- Un nouvel **espace admin premium en App Router** sous `/admin/*` optimisé pour l’enrichissement de recettes.
+- Un nouvel **espace admin recettes enrichies en App Router** sous `/admin/*` optimisé pour l’enrichissement de recettes.
 
 ---
 
 ## Sommaire
 
 - [1. Stack & architecture](#1-stack--architecture)
-- [2. Définition d’une “recette premium”](#2-définition-dune-recette-premium)
-- [3. Fonctionnalités de l’admin premium](#3-fonctionnalités-de-ladmin-premium)
-  - [3.1. Dashboard admin](#31-dashboard-admin)
-  - [3.2. Gestion des recettes – Mode premium](#32-gestion-des-recettes--mode-premium)
+- [2. Définition d’une recette “complète Chefito”](#2-définition-dune-recette-complète-chefito)
+- [3. Fonctionnalités de l’admin recettes](#3-fonctionnalités-de-ladmin-recettes)
+  - [3.2. Gestion des recettes – Mode enrichi](#32-gestion-des-recettes--mode-enrichi)
   - [3.3. Alertes de similarité & gestion des doublons](#33-alertes-de-similarité--gestion-des-doublons)
   - [3.4. Bibliothèque d’ingrédients](#34-bibliothèque-dingrédients)
   - [3.5. Knowledge base (concepts scientifiques)](#35-knowledge-base-concepts-scientifiques)
@@ -42,7 +41,7 @@ Ce projet combine :
 
 - **Framework** : Next.js 15
   - Backoffice historique en **pages router** (`src/pages`)
-  - Admin premium en **App Router** (`src/app/admin`)
+  - Admin recettes enrichies en **App Router** (`src/app/admin`)
 - **Auth & données** : Supabase
   - Auth utilisateurs (email/mot de passe)
   - Tables métiers principales :  
@@ -68,9 +67,9 @@ Ce projet combine :
 
 ---
 
-## 2. Définition d’une “recette premium”
+## 2. Définition d’une recette “complète Chefito”
 
-Une recette est considérée **“premium”** si elle respecte l’ensemble des critères suivants (implémentés dans le code comme une fonction `getPremiumMissing(recipe)`):
+On considère qu’une recette est **complète** (au sens Chefito) lorsqu’elle respecte l’ensemble des critères éditoriaux et SEO suivants (implémentés dans le code comme une fonction `getPremiumMissing(recipe)`, même si le mot “premium” n’est plus utilisé dans l’interface) :
 
 1. **Publication**
    - `status = 'published'`
@@ -90,13 +89,13 @@ Une recette est considérée **“premium”** si elle respecte l’ensemble des
    - `meta_title` non vide
    - `meta_description` non vide
 
-5. **Détails premium**
+5. **Détails Chefito**
    - Au moins un des deux champs est non vide :
      - `chef_tips`
      - `difficulty_detailed`
 
-> Remarque : la présence d’un **embedding RAG** n’est **pas** un critère de “recette premium”.  
-> C’est une information technique complémentaire (affichée dans l’UI) qui peut être mise à jour à la demande, mais la qualité premium reste un jugement éditorial / SEO.
+> Remarque : la présence d’un **embedding RAG** n’est **pas** un critère de recette “complète”.  
+> C’est une information technique complémentaire (affichée dans l’UI) qui peut être mise à jour à la demande, mais la complétude reste un jugement éditorial / SEO.
 
 Si **au moins un** de ces critères manque, la recette est considérée comme **“à enrichir”**.  
 L’UI liste les critères manquants sous forme de badges (ex. _“Image”_, _“Notes nutritionnelles”_, _“Titre SEO”_).
@@ -104,26 +103,13 @@ L’UI liste les critères manquants sous forme de badges (ex. _“Image”_, _�
 Cette logique est utilisée :
 
 - Dans la **liste des recettes** (`/admin/recipes`) pour afficher les badges ✅/⚠️.
-- Dans la **page d’édition** (`/admin/recipes/[id]/edit`) dans le panneau “Statut premium”.
+- Dans la **page d’édition** (`/admin/recipes/[id]/edit`) dans un panneau de “Qualité éditoriale”.
 
 ---
 
-## 3. Fonctionnalités de l’admin premium
+## 3. Fonctionnalités de l’admin recettes
 
-### 3.1. Dashboard admin
-
-#### `/admin/dashboard`
-
-- Vue d’ensemble (via `src/lib/dashboard.ts`) :
-  - Nombre total de recettes (`recipes`) et recettes avec vecteurs S3.
-  - Nombre total d’articles (`posts`), articles enrichis et mis en cache.
-  - Nombre total d’utilisateurs (`user_profiles`).
-- Présentation en cartes “card” avec métriques et explications (RAG).
-- Les intégrations avancées (Redis, S3 externe, Vault) sont optionnelles et ne sont plus requises par le dashboard par défaut.
-
----
-
-### 3.2. Gestion des recettes – Mode premium
+### 3.2. Gestion des recettes – Mode enrichi
 
 #### 3.2.1. Liste des recettes `/admin/recipes`
 
@@ -161,10 +147,10 @@ Fonctionnalités :
   - Pages de 50 recettes (configurable),
   - Tri par `created_at` (les plus récentes en premier),
   - Affichage du nombre total de recettes correspondant aux filtres.
-- **Qualité premium** :
-  - Badge **✅ “enrichie”** si tous les critères premium (éditoriaux/SEO) sont remplis.
+- **Qualité éditoriale** :
+  - Badge **✅ “complète”** si tous les critères éditoriaux/SEO sont remplis.
   - Badge **⚠️ “à enrichir”** sinon.
-  - Badge rouge indiquant le nombre de champs manquants : `X champ(s) manquant(s)` (critères premium).
+  - Badge rouge indiquant le nombre de champs manquants : `X champ(s) manquant(s)` (critères de complétude).
 - **Colonne RAG** :
   - Badge **“RAG complet / partiel / absent”** calculé côté front à partir de :
     - la présence d’ingrédients normalisés,
@@ -291,17 +277,17 @@ UI & fonctionnalités :
   - Suppression de toutes les anciennes étapes de la recette.
   - Insertion des nouvelles étapes ordonnées.
 
-##### f) Panneau “Statut premium & actions rapides”
+##### f) Panneau “Qualité éditoriale & actions rapides”
 
 Dans la page d’édition, un panneau récapitule :
 
-- **Statut premium** :
-  - `recette premium` (si aucun critère manquant) ou
-  - `à enrichir pour être premium` (liste des critères manquants).
+- **Qualité éditoriale** :
+  - `recette complète` (si aucun critère manquant) ou
+  - `recette à enrichir` (liste des critères manquants).
 - **Embedding RAG** (facultatif) :
   - Indication `Présent` / `Manquant` (via `recipe.embedding`).
   - Bouton “Générer / recalculer l’embedding”.
-  - L’embedding n’influence pas le statut premium, il sert uniquement à la recherche/RAG.
+  - L’embedding n’influence pas la qualité éditoriale, il sert uniquement à la recherche/RAG.
 - **Concepts scientifiques** :
   - Nombre de concepts liés via `recipe_concepts`.
   - Bouton vers `/admin/knowledge` pour gérer `knowledge_base`.
@@ -313,7 +299,7 @@ Dans la page d’édition, un panneau récapitule :
   - Étapes enrichies présentes ou non (`recipe_steps_enhanced`).
   - Concepts scientifiques liés présents ou non (`recipe_concepts`).
   - SEO complet ou non (titre + meta description).
-  - Permet de voir immédiatement si la recette est “RAG-ready” côté données, indépendamment du statut premium.
+  - Permet de voir immédiatement si la recette est “RAG-ready” côté données, indépendamment de la qualité éditoriale.
 
 ##### g) Actions globales sur la recette
 
@@ -655,7 +641,7 @@ Si tu veux conserver cette interface minimaliste pour du debug ponctuel, tu peux
 
 En pratique, le backoffice te permet aujourd’hui :
 
-- De **lister et filtrer** les recettes à grande échelle (pagination serveur) et voir immédiatement lesquelles sont au niveau “premium”.
+- De **lister et filtrer** les recettes à grande échelle (pagination serveur) et voir immédiatement lesquelles sont complètes ou à enrichir.
 - De **retrouver instantanément** une recette précise via un champ de recherche par **ID ou slug exact**.
 - De **piloter la structure RAG** des recettes grâce :
   - à une colonne **RAG** (complet / partiel / absent),
@@ -667,7 +653,7 @@ En pratique, le backoffice te permet aujourd’hui :
   - SEO (avec auto-remplissage basique du titre et de la meta description),
   - image,
   - statut et publication.
-- De **piloter la qualité premium** via une définition claire et visible dans l’UI, indépendante de l’IA.
+- De **piloter la qualité éditoriale** via une définition claire et visible dans l’UI, indépendante de l’IA.
 - De **gérer les alertes de similarité** :
   - marquage parent/enfant,
   - rejet,
@@ -791,7 +777,7 @@ Ces colonnes sont utilisées par la page `/admin/knowledge` pour saisir des déf
 
 ### 7.1. Rédacteur / éditorial
 
-Objectif : enrichir des recettes pour les passer au niveau “premium”.
+Objectif : enrichir des recettes pour les rendre complètes (au sens éditorial/SEO Chefito).
 
 1. **Se connecter**
    - Aller sur `/auth/sign-in`.

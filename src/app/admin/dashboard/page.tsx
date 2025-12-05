@@ -43,7 +43,7 @@ const AdminDashboardPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-          Dashboard admin – Recettes premium
+          Dashboard admin – Recettes enrichies
         </h1>
         <p className="mt-1 text-sm text-slate-400">
           Vue d’ensemble des recettes, ingrédients, concepts scientifiques et
@@ -104,11 +104,11 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
-      {/* Barres de progression premium */}
+      {/* Barres de progression de complétude */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card px-4 py-4">
           <p className="text-xs uppercase tracking-wide text-slate-400">
-            Enrichissement premium
+            Recettes avec embedding RAG
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
             <span>{enrichedRecipes} recettes enrichies</span>
