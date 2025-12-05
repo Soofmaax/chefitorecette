@@ -115,6 +115,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data } = supabase.auth.onAuthStateChange(
         async (_event: string, session: { user: User } | null) => {
           try {
+            // eslint-disable-next-line no-console
+            console.log(
+              "[Auth] onAuthStateChange",
+              _event,
+              "session user ?",
+              !!session?.user
+            );
+
             if (session?.user) {
               const userWithRole = await fetchUserWithRole(session.user);
               setUser(userWithRole);
@@ -160,10 +168,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     try {
+      // eslint-disable-next-line no-console
+      console.log("[Auth] signInWithEmail start", { email });
+
       const result = await supabase.auth.signInWithPassword({
         email,
         password
       });
+
+      // eslint-disable-next-line no-console
+      console.log("[Auth] signInWithEmail result", result);
 
       // Si la connexion échoue (mauvais identifiants, etc.),
       // Supabase renvoie une erreur mais ne déclenche pas forcément
