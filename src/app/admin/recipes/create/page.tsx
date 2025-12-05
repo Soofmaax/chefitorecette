@@ -615,9 +615,124 @@ const AdminCreateRecipePage = () => {
           </div>
         </section>
 
+        {/* 3. Repos & conservation */}
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            3. Texte détaillé
+            3. Repos &amp; conservation
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label htmlFor="storage_duration_days">
+                Durée de conservation (jours)
+              </label>
+              <input
+                id="storage_duration_days"
+                type="number"
+                className="mt-1 w-full"
+                min={0}
+                {...register("storage_duration_days", {
+                  valueAsNumber: true
+                })}
+              />
+              {errors.storage_duration_days && (
+                <p className="form-error">
+                  {errors.storage_duration_days.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-slate-200">
+                Température de service
+              </p>
+              <Controller
+                control={control}
+                name="serving_temperatures"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                      {SERVING_TEMPERATURE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-slate-200">
+                Modes de conservation
+              </p>
+              <Controller
+                control={control}
+                name="storage_modes"
+                render={({ field }) => {
+                  const selected: string[] = field.value ?? [];
+                  const toggle = (val: string) => {
+                    if (selected.includes(val)) {
+                      field.onChange(selected.filter((v) => v !== val));
+                    } else {
+                      field.onChange([...selected, val]);
+                    }
+                  };
+                  return (
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                      {STORAGE_MODE_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className="inline-flex items-center gap-2 text-slate-200"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-primary-500"
+                            checked={selected.includes(opt.value)}
+                            onChange={() => toggle(opt.value)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label htmlFor="storage_instructions">
+                Conseils de conservation
+              </label>
+              <textarea
+                id="storage_instructions"
+                rows={3}
+                className="mt-1 w-full"
+                placeholder="Par exemple : se conserve 2 jours au réfrigérateur dans un contenant hermétique…"
+                {...register("storage_instructions")}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Texte détaillé */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            4. Texte détaillé
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -660,7 +775,7 @@ const AdminCreateRecipePage = () => {
 
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            4. Image &amp; SEO
+            5. Image &amp; SEO
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div>

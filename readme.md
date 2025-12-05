@@ -39,21 +39,44 @@ Ce projet combine :
 
 ### 1.1. Technologies
 
-- **Framework** : Next.js 15
+- **Framework** : Next.js 15 (App Router + Pages Router)
   - Backoffice historique en **pages router** (`src/pages`)
   - Admin recettes enrichies en **App Router** (`src/app/admin`)
+- **Langage** : TypeScript 5.x
 - **Auth & données** : Supabase
-  - Auth utilisateurs (email/mot de passe)
+  - Auth utilisateurs (email/mot de passe, Supabase Auth)
+  - RLS (Row Level Security) activé côté base, usage d’un client `supabase` (clé publique) et d’un client `supabaseAdmin` (service role) côté serveur
+  - Fonctions SQL / Edge : génération d’**embeddings**, recherche sémantique, etc.
   - Tables métiers principales :  
-    `recipes`, `ingredients_catalog`, `recipe_ingredients_normalized`,  
-    `recipe_steps_enhanced`, `recipe_concepts`, `knowledge_base`,  
-    `audio_library`, `audio_mapping`, `audio_usage_stats`,  
-    `recipe_similarity_alerts`, `recipe_relationships`, `recipe_embeddings`, etc.
+    - Recettes & structure RAG :  
+      `recipes`, `ingredients_catalog`, `recipe_ingredients_normalized`,  
+      `recipe_steps_enhanced`, `recipe_concepts`, `knowledge_base`,  
+      `recipe_similarity_alerts`, `recipe_relationships`
+    - Audio :  
+      `audio_library`, `audio_mapping`, `audio_usage_stats`
+    - Contenus éditoriaux & calendrier :  
+      `editorial_calendar`, `posts` (si présent)
+- **Stockage & fichiers**
+  - Supabase Storage (buckets) :
+    - `recipe-images` pour les images de recettes
+    - `audio-files` pour les fichiers audio
+- **Embeddings & RAG**
+  - Génération d’embeddings (recettes & articles) via Supabase Edge Functions
+  - Stockage d’un vecteur local (`recipes.embedding`) et d’une clé de vecteur S3 (`s3_vector_key`) pour intégration ultérieure sur de gros volumes
+  - Statut d’embedding : `embedding_status` (prêt pour le suivi)
 - **UI & formulaires**
   - Tailwind CSS, thème sombre
-  - React Hook Form + Zod
-  - React Query (`@tanstack/react-query`)
+  - React Hook Form + Zod (validation forte alignée sur le schéma SQL)
+  - React Query (`@tanstack/react-query`) pour les données (page recettes, RAG, calendrier éditorial, etc.)
   - Tiptap (`@tiptap/react`) pour le texte riche des étapes
+- **Qualité & CI**
+  - ESLint, Prettier, TypeScript strict
+  - GitHub Actions (`.github/workflows/ci.yml`) :
+    - Lint + typecheck
+    - Build Next.js
+    - `npm audit --audit-level=high`
+    - CodeQL (analyse sécurité)
+  - Husky + lint-staged pour empêcher les commits non conformes
 
 ### 1.2. Authentification & rôles
 
@@ -120,8 +143,11 @@ Affichage (via `src/app/admin/recipes/page.tsx`) :
   - Typage : `category` (type de plat structuré), `cuisine`, `difficulty`
   - Temps (en minutes) : `prep_time_min`, `cook_time_min`, `rest_time_min`, `servings`
   - Contenu éditorial : `ingredients_text`, `instructions_detailed`, `chef_tips`, `cultural_history`, `techniques`, `difficulty_detailed`, `nutritional_notes`
-  - Conservation & service : `storage_instructions`, `storage_duration_days`, `storage_modes` (modes structurés), `serving_temperatures` (températures de service structurées)
+  - Conservation & service :  
+    - Structuré : `storage_modes` (modes de conservation : réfrigérateur, congélateur, ambiante, sous vide, boîte hermétique, au choix), `serving_temperatures` (températures de service : chaud, tiède, ambiante, froid, au choix)  
+    - Libre : `storage_instructions`, `storage_duration_days`
   - Régimes : `dietary_labels` (régimes / contraintes alimentaires structurées)
+  - Ustensiles / “technos” de cuisine : via `utensils_catalog` + `recipe_utensils` (four, airfryer, Thermomix, Cookeo, robot pâtissier, mixeur, etc.)
   - SEO : `meta_title`, `meta_description`, `canonical_url`, `og_image_url`
   - Technique : `embedding` (optionnel, indicateur technique)
 

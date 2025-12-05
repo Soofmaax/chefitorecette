@@ -27,6 +27,10 @@ interface AdminRecipe {
   techniques: string | null;
   difficulty_detailed: string | null;
   nutritional_notes: string | null;
+  storage_instructions: string | null;
+  storage_duration_days: number | null;
+  storage_modes: string[] | null;
+  serving_temperatures: string[] | null;
   meta_title: string | null;
   meta_description: string | null;
   embedding: unknown | null;
@@ -171,7 +175,7 @@ const fetchRecipes = async (
   let query = supabase
     .from("recipes")
     .select(
-      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, meta_title, meta_description, embedding",
+      "id, title, slug, status, description, image_url, category, cuisine, difficulty, created_at, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, storage_modes, serving_temperatures, meta_title, meta_description, embedding",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -223,6 +227,18 @@ const fetchRecipes = async (
     items: ((data as AdminRecipe[]) ?? []).filter((r) => !!r.id),
     total: count ?? 0
   };
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  entree: "Entrée",
+  plat_principal: "Plat principal",
+  accompagnement: "Accompagnement",
+  dessert: "Dessert",
+  aperitif: "Apéritif",
+  gateau: "Gâteau",
+  boisson: "Boisson",
+  sauce: "Sauce",
+  test: "Test"
 };
 
 const fetchCategories = async (): Promise<string[]> => {
@@ -685,7 +701,10 @@ const AdminRecipesPage = () => {
                         {recipe.cuisine || "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-400">
-                        {recipe.category || "—"}
+                        {recipe.category
+                          ? CATEGORY_LABELS[recipe.category] ||
+                            recipe.category
+                          : "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-200">
                         <div className="flex flex-wrap gap-1">
