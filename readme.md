@@ -134,6 +134,8 @@ Cette logique est utilisée :
 
 ### 3.2. Gestion des recettes – Mode enrichi
 
+Le backoffice admin est pensé pour que **tous les champs nécessaires au RAG et au front** soient pilotables depuis l’interface, sans passer par SQL.
+
 #### 3.2.1. Liste des recettes `/admin/recipes`
 
 Affichage (via `src/app/admin/recipes/page.tsx`) :
@@ -150,6 +152,14 @@ Affichage (via `src/app/admin/recipes/page.tsx`) :
   - Ustensiles / “technos” de cuisine : via `utensils_catalog` + `recipe_utensils` (four, airfryer, Thermomix, Cookeo, robot pâtissier, mixeur, etc.)
   - SEO : `meta_title`, `meta_description`, `canonical_url`, `og_image_url`
   - Technique : `embedding` (optionnel, indicateur technique)
+
+L’interface met aussi en avant, pour chaque recette :
+
+- Un badge de **qualité éditoriale** (complète / à enrichir) basé sur `getRecipeMissingFields`.
+- Des badges **RAG structure** (ingrédients normalisés, étapes enrichies, concepts scientifiques).
+- Des badges **“techno”** :
+  - 🌡 `conservation / service` si au moins une info de conservation/serving est renseignée.
+  - 🔧 `ustensiles` si des entrées existent dans `recipe_utensils`.
 
 Fonctionnalités :
 

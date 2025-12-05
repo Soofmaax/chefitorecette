@@ -895,6 +895,16 @@ const AdminEditRecipePage = () => {
           >
             Dupliquer la recette
           </Button>
+          {id && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => router.push(`/admin/recipes/${id}/preview`)}
+            >
+              Prévisualiser la page publique
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"

@@ -9,7 +9,8 @@ import {
   BookOpen,
   Brain,
   Headphones,
-  CalendarDays
+  CalendarDays,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,8 @@ const navItems = [
   { name: "Alertes similarité", href: "/admin/alerts", icon: AlertTriangle },
   { name: "Ingrédients", href: "/admin/ingredients", icon: BookOpen },
   { name: "Connaissances", href: "/admin/knowledge", icon: Brain },
-  { name: "Audio", href: "/admin/audio", icon: Headphones }
+  { name: "Audio", href: "/admin/audio", icon: Headphones },
+  { name: "Ustensiles", href: "/admin/utensils", icon: Wrench }
 ];
 
 interface AdminSidebarProps {
