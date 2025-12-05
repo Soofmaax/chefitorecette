@@ -23,19 +23,19 @@ type IngredientDbRow = {
   audio_key: string | null;
 };
 
-async function parseCsv(filePath: string): Promise&lt;IngredientCsvRow[]&gt; {
+async function parseCsv(filePath: string): Promise<IngredientCsvRow[]> {
   const raw = await fs.promises.readFile(filePath, "utf8");
 
   const lines = raw
     .split("\n")
-    .map((l) =&gt; l.trim())
-    .filter((l) =&gt; l.length &gt; 0);
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
-  if (lines.length &lt; 2) {
+  if (lines.length < 2) {
     throw new Error("Le fichier CSV ne contient pas de données.");
   }
 
-  const header = lines[0].split(";").map((h) =&gt; h.trim());
+  const header = lines[0].split(";").map((h) => h.trim());
   const expectedHeader = [
     "ingredient_id",
     "canonical_name",
@@ -50,8 +50,8 @@ async function parseCsv(filePath: string): Promise&lt;IngredientCsvRow[]&gt; {
   ];
 
   const headerOk =
-    header.length === expectedHeader.length &amp;&amp;
-    header.every((h, i) =&gt; h === expectedHeader[i]);
+    header.length === expectedHeader.length &&
+    header.every((h, i) => h === expectedHeader[i]);
 
   if (!headerOk) {
     throw new Error(
@@ -63,11 +63,11 @@ async function parseCsv(filePath: string): Promise&lt;IngredientCsvRow[]&gt; {
 
   const rows: IngredientCsvRow[] = [];
 
-  for (let i = 1; i &lt; lines.length; i++) {
+  for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i];
     const parts = line.split(";");
 
-    if (parts.length &lt; expectedHeader.length) {
+    if (parts.length < expectedHeader.length) {
       // Ligne incomplète : on l'ignore mais on log
       // eslint-disable-next-line no-console
       console.warn(`Ligne ${i + 1} ignorée (trop courte): ${line}`);
@@ -85,7 +85,7 @@ async function parseCsv(filePath: string): Promise&lt;IngredientCsvRow[]&gt; {
       gluten_free,
       dairy_free,
       notes
-    ] = parts.map((p) =&gt; p.trim());
+    ] = parts.map((p) => p.trim());
 
     rows.push({
       ingredient_id,
@@ -105,7 +105,7 @@ async function parseCsv(filePath: string): Promise&lt;IngredientCsvRow[]&gt; {
 }
 
 function mapToDbRows(csvRows: IngredientCsvRow[]): IngredientDbRow[] {
-  return csvRows.map((row) =&gt; ({
+  return csvRows.map((row) => ({
     canonical_name: row.canonical_name,
     display_name: row.label_fr,
     category: row.category,
@@ -114,10 +114,10 @@ function mapToDbRows(csvRows: IngredientCsvRow[]): IngredientDbRow[] {
   }));
 }
 
-async function upsertIngredients(dbRows: IngredientDbRow[]): Promise&lt;void&gt; {
+async function upsertIngredients(dbRows: IngredientDbRow[]): Promise<void> {
   const BATCH_SIZE = 100;
 
-  for (let i = 0; i &lt; dbRows.length; i += BATCH_SIZE) {
+  for (let i = 0; i < dbRows.length; i += BATCH_SIZE) {
     const batch = dbRows.slice(i, i + BATCH_SIZE);
 
     const { error } = await supabaseAdmin
@@ -139,13 +139,13 @@ async function upsertIngredients(dbRows: IngredientDbRow[]): Promise&lt;void&gt;
   }
 }
 
-async function main(): Promise&lt;void&gt; {
+async function main(): Promise<void> {
   const csvPathArg = process.argv[2];
 
   if (!csvPathArg) {
     // eslint-disable-next-line no-console
     console.error(
-      "Usage: ts-node scripts/importIngredients.ts &lt;chemin_du_csv&gt;"
+      "Usage: ts-node scripts/importIngredients.ts <chemin_du_csv>"
     );
     process.exit(1);
   }
@@ -167,7 +167,7 @@ async function main(): Promise&lt;void&gt; {
   console.log("Import/Upsert des ingrédients terminé.");
 }
 
-main().catch((err) =&gt; {
+main().catch((err) => {
   // eslint-disable-next-line no-console
   console.error("Erreur fatale dans le script importIngredients:", err);
   process.exit(1);

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useToast } from "@/components/ui/ToastProvider";
 
-type CsvRow = Record&lt;string, string&gt;;
+type CsvRow = Record<string, string>;
 
 interface ParsedRow {
   index: number;
@@ -30,12 +30,12 @@ interface ColumnMapping {
 const normalizeHeader = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-const guessColumnMapping = (headers: string[]): ColumnMapping =&gt; {
-  const find = (candidates: string[]): string | null =&gt; {
-    const normalizedHeaders = headers.map((h) =&gt; normalizeHeader(h));
+const guessColumnMapping = (headers: string[]): ColumnMapping => {
+  const find = (candidates: string[]): string | null => {
+    const normalizedHeaders = headers.map((h) => normalizeHeader(h));
     for (const candidate of candidates) {
       const needle = normalizeHeader(candidate);
-      const idx = normalizedHeaders.findIndex((h) =&gt; h.includes(needle));
+      const idx = normalizedHeaders.findIndex((h) => h.includes(needle));
       if (idx !== -1) {
         return headers[idx];
       }
@@ -49,11 +49,11 @@ const guessColumnMapping = (headers: string[]): ColumnMapping =&gt; {
   };
 };
 
-const parseCsv = (text: string): { headers: string[]; rows: ParsedRow[] } =&gt; {
+const parseCsv = (text: string): { headers: string[]; rows: ParsedRow[] } => {
   const lines = text
     .split(/\r?\n/)
-    .map((l) =&gt; l.trim())
-    .filter((l) =&gt; l.length &gt; 0);
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
   if (lines.length === 0) {
     throw new Error("Le fichier CSV est vide.");
@@ -62,17 +62,17 @@ const parseCsv = (text: string): { headers: string[]; rows: ParsedRow[] } =&gt; 
   const firstLine = lines[0];
   const commaCount = (firstLine.match(/,/g) || []).length;
   const semiCount = (firstLine.match(/;/g) || []).length;
-  const delimiter = semiCount &gt; commaCount ? ";" : ",";
+  const delimiter = semiCount > commaCount ? ";" : ",";
 
-  const headers = firstLine.split(delimiter).map((h) =&gt; h.trim());
+  const headers = firstLine.split(delimiter).map((h) => h.trim());
   const rows: ParsedRow[] = [];
 
-  for (let i = 1; i &lt; lines.length; i += 1) {
+  for (let i = 1; i < lines.length; i += 1) {
     const raw = lines[i];
     if (!raw) continue;
     const parts = raw.split(delimiter);
     const row: CsvRow = {};
-    headers.forEach((h, idx) =&gt; {
+    headers.forEach((h, idx) => {
       row[h] = (parts[idx] ?? "").trim();
     });
     rows.push({ index: i, values: row });
@@ -84,9 +84,9 @@ const parseCsv = (text: string): { headers: string[]; rows: ParsedRow[] } =&gt; 
 const buildImportRows = (
   parsed: ParsedRow[],
   mapping: ColumnMapping
-): UtensilImportRow[] =&gt; {
-  return parsed.map((row) =&gt; {
-    const get = (columnName: string | null): string =&gt; {
+): UtensilImportRow[] => {
+  return parsed.map((row) => {
+    const get = (columnName: string | null): string => {
       if (!columnName) return "";
       return row.values[columnName] ?? "";
     };
@@ -115,37 +115,37 @@ const buildImportRows = (
   });
 };
 
-const AdminUtensilsImportPage = () =&gt; {
+const AdminUtensilsImportPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [fileName, setFileName] = useState&lt;string | null&gt;(null);
-  const [headers, setHeaders] = useState&lt;string[]&gt;([]);
-  const [parsedRows, setParsedRows] = useState&lt;ParsedRow[]&gt;([]);
-  const [mapping, setMapping] = useState&lt;ColumnMapping | null&gt;(null);
-  const [parseError, setParseError] = useState&lt;string | null&gt;(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [mapping, setMapping] = useState<ColumnMapping | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
 
-  const importRows = useMemo(() =&gt; {
+  const importRows = useMemo(() => {
     if (!mapping) return [];
     if (parsedRows.length === 0) return [];
     return buildImportRows(parsedRows, mapping);
   }, [parsedRows, mapping]);
 
   const validRows = useMemo(
-    () =&gt; importRows.filter((r) =&gt; r.errors.length === 0),
+    () => importRows.filter((r) => r.errors.length === 0),
     [importRows]
   );
   const invalidRows = useMemo(
-    () =&gt; importRows.filter((r) =&gt; r.errors.length &gt; 0),
+    () => importRows.filter((r) => r.errors.length > 0),
     [importRows]
   );
 
   const importMutation = useMutation({
-    mutationFn: async (rows: UtensilImportRow[]) =&gt; {
+    mutationFn: async (rows: UtensilImportRow[]) => {
       const payload = rows
-        .filter((r) =&gt; r.errors.length === 0)
-        .map((r) =&gt; ({
+        .filter((r) => r.errors.length === 0)
+        .map((r) => ({
           key: r.key,
           label: r.label
         }));
@@ -164,7 +164,7 @@ const AdminUtensilsImportPage = () =&gt; {
         throw error;
       }
     },
-    onSuccess: () =&gt; {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["utensils-catalog"] });
       showToast({
         type: "success",
@@ -172,7 +172,7 @@ const AdminUtensilsImportPage = () =&gt; {
       });
       router.push("/admin/utensils?import=success");
     },
-    onError: (err: any) =&gt; {
+    onError: (err: any) => {
       const msg =
         err?.message ?? "Erreur lors de l'import CSV des ustensiles.";
       showToast({
@@ -183,8 +183,8 @@ const AdminUtensilsImportPage = () =&gt; {
   });
 
   const handleFileChange = async (
-    event: React.ChangeEvent&lt;HTMLInputElement&gt;
-  ) =&gt; {
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0] ?? null;
     if (!file) {
       setFileName(null);
@@ -216,8 +216,8 @@ const AdminUtensilsImportPage = () =&gt; {
     }
   };
 
-  const handleMappingChange = (field: keyof ColumnMapping, column: string) =&gt; {
-    setMapping((prev) =&gt; {
+  const handleMappingChange = (field: keyof ColumnMapping, column: string) => {
+    setMapping((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
@@ -226,7 +226,7 @@ const AdminUtensilsImportPage = () =&gt; {
     });
   };
 
-  const handleImport = async () =&gt; {
+  const handleImport = async () => {
     if (importRows.length === 0 || validRows.length === 0) return;
     try {
       await importMutation.mutateAsync(importRows);
@@ -238,153 +238,153 @@ const AdminUtensilsImportPage = () =&gt; {
   const previewRows = importRows.slice(0, 20);
 
   return (
-    &lt;div className="space-y-6"&gt;
-      &lt;div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"&gt;
-        &lt;div&gt;
-          &lt;h1 className="text-xl font-semibold tracking-tight text-slate-50"&gt;
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-50">
             Import CSV – Ustensiles / matériel
-          &lt;/h1&gt;
-          &lt;p className="mt-1 text-sm text-slate-400"&gt;
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
             Importe ou mets à jour le catalogue d&apos;ustensiles à partir
             d&apos;un fichier CSV. Les lignes sont insérées ou mises à jour
             selon la clé.
-          &lt;/p&gt;
-          &lt;p className="mt-1 text-xs text-slate-500"&gt;
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
             Clé de déduplication :{" "}
-            &lt;code className="rounded bg-slate-800 px-1 text-[11px]"&gt;
+            <code className="rounded bg-slate-800 px-1 text-[11px]">
               key
-            &lt;/code&gt;
+            </code>
             . Si une clé existe déjà, la ligne correspondante est mise à jour.
-          &lt;/p&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
+          </p>
+        </div>
+      </div>
 
-      &lt;div className="card space-y-4 px-4 py-4"&gt;
-        &lt;div className="space-y-2"&gt;
-          &lt;label
+      <div className="card space-y-4 px-4 py-4">
+        <div className="space-y-2">
+          <label
             htmlFor="csv_file"
             className="text-xs font-semibold text-slate-200"
-          &gt;
+          >
             Fichier CSV
-          &lt;/label&gt;
-          &lt;input
+          </label>
+          <input
             id="csv_file"
             type="file"
             accept=".csv,text/csv"
             className="w-full text-sm text-slate-200 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-100 hover:file:bg-slate-700"
             onChange={handleFileChange}
-          /&gt;
-          {fileName &amp;&amp; (
-            &lt;p className="text-xs text-slate-500"&gt;
+          />
+          {fileName && (
+            <p className="text-xs text-slate-500">
               Fichier sélectionné : {fileName}
-            &lt;/p&gt;
+            </p>
           )}
-          {parseError &amp;&amp; (
-            &lt;p className="text-xs text-red-300"&gt;{parseError}&lt;/p&gt;
+          {parseError && (
+            <p className="text-xs text-red-300">{parseError}</p>
           )}
-        &lt;/div&gt;
+        </div>
 
-        {headers.length &gt; 0 &amp;&amp; mapping &amp;&amp; (
-          &lt;div className="space-y-3 text-xs"&gt;
-            &lt;p className="font-semibold text-slate-200"&gt;
+        {headers.length > 0 && mapping && (
+          <div className="space-y-3 text-xs">
+            <p className="font-semibold text-slate-200">
               1. Mapping automatique des colonnes
-            &lt;/p&gt;
-            &lt;p className="text-[11px] text-slate-500"&gt;
+            </p>
+            <p className="text-[11px] text-slate-500">
               Vérifie que chaque champ du catalogue est correctement associé à
               une colonne du CSV. Tu peux modifier le mapping si besoin.
-            &lt;/p&gt;
+            </p>
 
-            &lt;div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3"&gt;
-              &lt;div&gt;
-                &lt;p className="mb-1 text-[11px] text-slate-400"&gt;Clé&lt;/p&gt;
-                &lt;select
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="mb-1 text-[11px] text-slate-400">Clé</p>
+                <select
                   className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   value={mapping.key ?? ""}
-                  onChange={(e) =&gt;
+                  onChange={(e) =>
                     handleMappingChange("key", e.target.value)
                   }
-                &gt;
-                  &lt;option value=""&gt;—&lt;/option&gt;
-                  {headers.map((h) =&gt; (
-                    &lt;option key={h} value={h}&gt;
+                >
+                  <option value="">—</option>
+                  {headers.map((h) => (
+                    <option key={h} value={h}>
                       {h}
-                    &lt;/option&gt;
+                    </option>
                   ))}
-                &lt;/select&gt;
-              &lt;/div&gt;
+                </select>
+              </div>
 
-              &lt;div&gt;
-                &lt;p className="mb-1 text-[11px] text-slate-400"&gt;
+              <div>
+                <p className="mb-1 text-[11px] text-slate-400">
                   Label affiché
-                &lt;/p&gt;
-                &lt;select
+                </p>
+                <select
                   className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   value={mapping.label ?? ""}
-                  onChange={(e) =&gt;
+                  onChange={(e) =>
                     handleMappingChange("label", e.target.value)
                   }
-                &gt;
-                  &lt;option value=""&gt;—&lt;/option&gt;
-                  {headers.map((h) =&gt; (
-                    &lt;option key={h} value={h}&gt;
+                >
+                  <option value="">—</option>
+                  {headers.map((h) => (
+                    <option key={h} value={h}>
                       {h}
-                    &lt;/option&gt;
+                    </option>
                   ))}
-                &lt;/select&gt;
-              &lt;/div&gt;
-            &lt;/div&gt;
-          &lt;/div&gt;
+                </select>
+              </div>
+            </div>
+          </div>
         )}
 
-        {importRows.length &gt; 0 &amp;&amp; (
-          &lt;div className="space-y-3 text-xs"&gt;
-            &lt;p className="font-semibold text-slate-200"&gt;
+        {importRows.length > 0 && (
+          <div className="space-y-3 text-xs">
+            <p className="font-semibold text-slate-200">
               2. Prévisualisation des 20 premières lignes
-            &lt;/p&gt;
-            &lt;p className="text-[11px] text-slate-500"&gt;
-              Lignes valides :{" "}
-              &lt;span className="text-emerald-300"&gt;{validRows.length}&lt;/span&gt; •
-              Lignes avec erreurs :{" "}
-              &lt;span className="text-red-300"&gt;{invalidRows.length}&lt;/span&gt;
-            &lt;/p&gt;
+            </p>
+            <p className="text-[11px] text-slate-500">
+              Lignes valides:{" "}
+              <span className="text-emerald-300">{validRows.length}</span> •
+              Lignes avec erreurs:{" "}
+              <span className="text-red-300">{invalidRows.length}</span>
+            </p>
 
-            &lt;div className="max-h-72 overflow-auto rounded-md border border-slate-800 bg-slate-950/40"&gt;
-              &lt;table className="min-w-full divide-y divide-slate-800 text-[11px]"&gt;
-                &lt;thead className="bg-slate-900/80 text-slate-400"&gt;
-                  &lt;tr&gt;
-                    &lt;th className="px-3 py-2 text-left"&gt;Ligne&lt;/th&gt;
-                    &lt;th className="px-3 py-2 text-left"&gt;Clé&lt;/th&gt;
-                    &lt;th className="px-3 py-2 text-left"&gt;Label&lt;/th&gt;
-                    &lt;th className="px-3 py-2 text-left"&gt;Erreurs&lt;/th&gt;
-                  &lt;/tr&gt;
-                &lt;/thead&gt;
-                &lt;tbody className="divide-y divide-slate-800"&gt;
-                  {previewRows.map((row) =&gt; (
-                    &lt;tr key={row.index}&gt;
-                      &lt;td className="px-3 py-2 align-top text-slate-500"&gt;
+            <div className="max-h-72 overflow-auto rounded-md border border-slate-800 bg-slate-950/40">
+              <table className="min-w-full divide-y divide-slate-800 text-[11px]">
+                <thead className="bg-slate-900/80 text-slate-400">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Ligne</th>
+                    <th className="px-3 py-2 text-left">Clé</th>
+                    <th className="px-3 py-2 text-left">Label</th>
+                    <th className="px-3 py-2 text-left">Erreurs</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {previewRows.map((row) => (
+                    <tr key={row.index}>
+                      <td className="px-3 py-2 align-top text-slate-500">
                         {row.index + 1}
-                      &lt;/td&gt;
-                      &lt;td className="px-3 py-2 align-top text-slate-100"&gt;
+                      </td>
+                      <td className="px-3 py-2 align-top text-slate-100">
                         {row.key}
-                      &lt;/td&gt;
-                      &lt;td className="px-3 py-2 align-top text-slate-100"&gt;
+                      </td>
+                      <td className="px-3 py-2 align-top text-slate-100">
                         {row.label}
-                      &lt;/td&gt;
-                      &lt;td className="px-3 py-2 align-top text-slate-400"&gt;
+                      </td>
+                      <td className="px-3 py-2 align-top text-slate-400">
                         {row.errors.length === 0 ? (
-                          &lt;span className="text-emerald-300"&gt;OK&lt;/span&gt;
+                          <span className="text-emerald-300">OK</span>
                         ) : (
                           row.errors.join("; ")
                         )}
-                      &lt;/td&gt;
-                    &lt;/tr&gt;
+                      </td>
+                    </tr>
                   ))}
-                &lt;/tbody&gt;
-              &lt;/table&gt;
-            &lt;/div&gt;
+                </tbody>
+              </table>
+            </div>
 
-            &lt;div className="flex items-center justify-between gap-3"&gt;
-              &lt;Button
+            <div className="flex items-center justify-between gap-3">
+              <Button
                 type="button"
                 variant="primary"
                 className="inline-flex items-center gap-2 text-xs"
@@ -394,37 +394,37 @@ const AdminUtensilsImportPage = () =&gt; {
                   validRows.length === 0
                 }
                 onClick={handleImport}
-              &gt;
-                {importMutation.isPending &amp;&amp; (
-                  &lt;LoadingSpinner size="sm" className="text-slate-100" /&gt;
+              >
+                {importMutation.isPending && (
+                  <LoadingSpinner size="sm" className="text-slate-100" />
                 )}
-                &lt;span&gt;
+                <span>
                   Importer / mettre à jour {validRows.length} ligne(s) valide(s)
-                &lt;/span&gt;
-              &lt;/Button&gt;
+                </span>
+              </Button>
 
-              {invalidRows.length &gt; 0 &amp;&amp; (
-                &lt;p className="text-[11px] text-amber-300"&gt;
+              {invalidRows.length > 0 && (
+                <p className="text-[11px] text-amber-300">
                   Les lignes avec erreurs ne seront pas importées.
-                &lt;/p&gt;
+                </p>
               )}
-            &lt;/div&gt;
+            </div>
 
-            {importMutation.isError &amp;&amp; (
-              &lt;p className="text-[11px] text-red-300"&gt;
+            {importMutation.isError && (
+              <p className="text-[11px] text-red-300">
                 {(importMutation.error as any)?.message ??
                   "Erreur lors de l'import CSV."}
-              &lt;/p&gt;
+              </p>
             )}
-            {importMutation.isSuccess &amp;&amp; (
-              &lt;p className="text-[11px] text-emerald-300"&gt;
+            {importMutation.isSuccess && (
+              <p className="text-[11px] text-emerald-300">
                 Import terminé. Le catalogue d&apos;ustensiles a été mis à jour.
-              &lt;/p&gt;
+              </p>
             )}
-          &lt;/div&gt;
+          </div>
         )}
-      &lt;/div&gt;
-    &lt;/div&gt;
+      </div>
+    </div>
   );
 };
 
