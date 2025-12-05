@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "import:ingredients": "ts-node scripts/importIngredients.ts data/ingredients_catalog.csv"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -42,7 +43,8 @@
     "typescript": "^5.3.3",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.0",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
