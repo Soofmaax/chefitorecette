@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
@@ -214,6 +215,7 @@ const buildImportRows = (
 
 const AdminEditorialImportPage = () => {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { showToast } = useToast();
 
   const [fileName, setFileName] = useState<string | null>(null);
@@ -258,6 +260,7 @@ const AdminEditorialImportPage = () => {
         type: "success",
         message: "Import CSV éditorial terminé avec succès."
       });
+      router.push("/admin/editorial-calendar?import=success");
     },
     onError: (err: any) => {
       const msg =

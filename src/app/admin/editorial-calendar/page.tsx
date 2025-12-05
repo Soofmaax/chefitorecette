@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -70,6 +71,8 @@ const statusOrder: EditorialStatus[] = [
 
 const AdminEditorialCalendarPage = () => {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const importSuccess = searchParams?.get("import") === "success";
 
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [search, setSearch] = useState("");
@@ -500,6 +503,11 @@ const AdminEditorialCalendarPage = () => {
 
   return (
     <div className="space-y-6">
+      {importSuccess && (
+        <div className="rounded-md border border-emerald-500/60 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-100">
+          Import CSV éditorial terminé. Les entrées importées apparaissent dans la liste ci-dessous.
+        </div>
+      )}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
