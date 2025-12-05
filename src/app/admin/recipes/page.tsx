@@ -60,6 +60,9 @@ type RagFilter =
   | "no_steps"
   | "no_concepts";
 
+type ConservationFilter = "all" | "with" | "without";
+type UtensilsFilter = "all" | "with" | "without";
+
 interface RagCounts {
   ingredients: number;
   steps: number;
@@ -390,6 +393,10 @@ const AdminRecipesPage = () => {
   const [search, setSearch] = useState("");
   const [slugOrId, setSlugOrId] = useState("");
   const [ragFilter, setRagFilter] = useState<RagFilter>("all");
+  const [conservationFilter, setConservationFilter] =
+    useState<ConservationFilter>("all");
+  const [utensilsFilter, setUtensilsFilter] =
+    useState<UtensilsFilter>("all");
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
 
@@ -403,7 +410,9 @@ const AdminRecipesPage = () => {
     cuisineFilter,
     search,
     slugOrId,
-    ragFilter
+    ragFilter,
+    conservationFilter,
+    utensilsFilter
   ]);
 
   const {
@@ -497,7 +506,7 @@ const AdminRecipesPage = () => {
   );
 
   const filteredRecipes = useMemo<RecipeWithRagInfo[]>(() => {
-    return recipesWithRag.filter(({ ragInfo }) => {
+    return recipesWithRag.filter(({ recipe, ragInfo }) => {
       const { status, hasIngredients, hasSteps, hasConcepts } = ragInfo;
 
       if (ragFilter === "complete" && status !== "complete") return false;
@@ -507,9 +516,33 @@ const AdminRecipesPage = () => {
       if (ragFilter === "no_steps" && hasSteps) return false;
       if (ragFilter === "no_concepts" && hasConcepts) return false;
 
+      const hasServingTemps =
+        Array.isArray(recipe.serving_temperatures) &&
+        recipe.serving_temperatures.length > 0;
+      const hasStorageModes =
+        Array.isArray(recipe.storage_modes) &&
+        recipe.storage_modes.length > 0;
+      const hasStorageHints =
+        typeof recipe.storage_duration_days === "number" ||
+        isNonEmpty(recipe.storage_instructions);
+      const hasConservation =
+        hasServingTemps || hasStorageModes || hasStorageHints;
+      const hasUtensils = utensilsPresence[recipe.id] ?? false;
+
+      if (conservationFilter === "with" && !hasConservation) return false;
+      if (conservationFilter === "without" && hasConservation) return false;
+      if (utensilsFilter === "with" && !hasUtensils) return false;
+      if (utensilsFilter === "without" && hasUtensils) return false;
+
       return true;
     });
-  }, [recipesWithRag, ragFilter]);
+  }, [
+    recipesWithRag,
+    ragFilter,
+    conservationFilter,
+    utensilsFilter,
+    utensilsPresence
+  ]);
 
   const embeddingMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -624,6 +657,32 @@ const AdminRecipesPage = () => {
               </option>
               <option value="no_steps">Sans étapes enrichies</option>
               <option value="no_concepts">Sans concepts scientifiques</option>
+            </select>
+
+            <select
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={conservationFilter}
+              onChange={(e) =>
+                setConservationFilter(
+                  e.target.value as ConservationFilter
+                )
+              }
+            >
+              <option value="all">Conservation (toutes)</option>
+              <option value="with">Avec conservation/service</option>
+              <option value="without">Sans conservation/service</option>
+            </select>
+
+            <select
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={utensilsFilter}
+              onChange={(e) =>
+                setUtensilsFilter(e.target.value as UtensilsFilter)
+              }
+            >
+              <option value="all">Ustensiles (tous)</option>
+              <option value="with">Avec ustensiles</option>
+              <option value="without">Sans ustensiles</option>
             </select>
           </div>
         </div>
