@@ -218,6 +218,7 @@ const AdminAlertsPage = () => {
           err?.message ?? "Erreur lors de l’appel à l’API de fusion."
       });
     }
+  });
 
   const pendingCount = alerts?.length ?? 0;
 
