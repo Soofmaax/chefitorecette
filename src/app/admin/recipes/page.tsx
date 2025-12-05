@@ -792,7 +792,7 @@ const AdminRecipesPage = () => {
                           : "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-200">
-                        <div className="flex flex-wrap gap-2">ap-1">
+                        <div className="flex flex-wrap gap-2">
                           {enriched && (
                             <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
                               ✅ complète

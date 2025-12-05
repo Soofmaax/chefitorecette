@@ -211,7 +211,13 @@ const AdminAlertsPage = () => {
         message: "Fusion des recettes effectuée avec succès."
       });
     },
-    onError: (err;
+    onError: (err: any) => {
+      showToast({
+        type: "error",
+        message:
+          err?.message ?? "Erreur lors de l’appel à l’API de fusion."
+      });
+    }
 
   const pendingCount = alerts?.length ?? 0;
 

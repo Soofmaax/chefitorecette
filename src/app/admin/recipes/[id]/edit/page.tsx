@@ -17,8 +17,6 @@ import {
 } from "@/lib/recipesQuality";
 import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { useToast } from "@/components/ui/ToastProvider";
-import { uploadRecipeImage } from "@/lib/storage";
-import { generateSlug } from "@/lib/slug";
 import { triggerEmbedding } from "@/lib/embeddings";
 import { buildRecipeJsonLd, validateRecipeJsonLd } from "@/lib/seo";
 import { TagInput } from "@/components/ui/TagInput";
@@ -712,6 +710,8 @@ const AdminEditRecipePage = () => {
       });
     }
   };
+
+  const handleDuplicate = async () => {
     if (!recipe) return;
 
     setMessage(null);
