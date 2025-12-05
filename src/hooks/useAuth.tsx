@@ -52,23 +52,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
 
-      const timeoutMs = 2000;
-
       try {
-        const getSessionPromise = supabase.auth.getSession();
-
         const {
           data: { session },
           error: sessionError
-        } = await Promise.race([
-          getSessionPromise,
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("getSession timeout")),
-              timeoutMs
-            )
-          )
-        ]);
+        } = await supabase.auth.getSession();
 
         if (sessionError) {
           // eslint-disable-next-line no-console
@@ -88,21 +76,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
       } catch (err) {
-        if (err instanceof Error && err.message === "getSession timeout") {
-          // Si la récupération de la session prend trop de temps,
-          // on considère qu'il n'y a pas de session valide et on
-          // laisse l'utilisateur se reconnecter sans bloquer l'UI.
-          setError(null);
-        } else {
-          // Ce bloc intercepte notamment l'erreur "Supabase client non configuré"
-          // lorsque les variables d'environnement ne sont pas définies.
-          // eslint-disable-next-line no-console
-          console.error("[Auth] Erreur d'initialisation de la session", err);
-          setError(
-            "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)."
-          );
-        }
-
+        // Ce bloc intercepte notamment l'erreur "Supabase client non configuré"
+        // lorsque les variables d'environnement ne sont pas définies.
+        // eslint-disable-next-line no-console
+        console.error("[Auth] Erreur d'initialisation de la session", err);
+        setError(
+          "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)."
+        );
         setUser(null);
       } finally {
         setLoading(false);
@@ -171,22 +151,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail start", { email });
 
-      const result = await supabase.auth.signInWithPassword({
+      const {
+        data,
+        error
+      } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       // eslint-disable-next-line no-console
-      console.log("[Auth] signInWithEmail result", result);
+      console.log("[Auth] signInWithEmail result", { data, error });
 
-      // Si la connexion échoue (mauvais identifiants, etc.),
-      // Supabase renvoie une erreur mais ne déclenche pas forcément
-      // de changement d'état de session. On arrête donc le chargement ici.
-      if (result.error) {
+      if (error) {
         setLoading(false);
+        return { data, error };
       }
 
-      return result;
+      if (data?.user) {
+        const userWithRole = await fetchUserWithRole(data.user);
+        setUser(userWithRole);
+      }
+
+      setLoading(false);
+      return { data, error: null };
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error("[Auth] Erreur lors de la tentative de connexion", err);
