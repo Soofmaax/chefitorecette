@@ -82,7 +82,34 @@ Les deux clients sont protégés par un `Proxy` qui lève une erreur si les vari
   - vérifier `user_profiles.role`,
   - journaliser les opérations sensibles (ex: logs d’audit en base).
 
-## 4. Row Level Security (RLS) – tables principales
+## 4. Supabase Auth & gestion des mots de passe
+
+- Auth gérée par Supabase (email + mot de passe) via Supabase Auth.
+- Les mots de passe ne transitent jamais par le backoffice (front → Supabase directement).
+- Rappels :
+  - Utiliser des mots de passe forts et uniques pour les comptes admin.
+  - Activer la double authentification (MFA) côté Supabase si nécessaire.
+
+### 4.1 Protection contre les mots de passe compromis (HaveIBeenPwned)
+
+Supabase propose une option **Prevent use of leaked passwords** (vérification des mots de passe via l’API HaveIBeenPwned), visible dans :
+
+- `Authentication > Sign In / Providers > Email > Prevent use of leaked passwords`
+
+Points à noter :
+
+- Cette option est **réservée au plan Pro** et n’est pas disponible sur le plan Free utilisé actuellement.
+- Le database linter Supabase signale un WARN `auth_leaked_password_protection` lorsque cette option est inactive.
+
+Décision dans ce projet :
+
+- Contexte : backoffice interne, un seul compte admin, mot de passe fort géré manuellement.
+- Tant que le projet reste sur le plan Free et limité à un admin, ce WARN est **accepté consciemment**.
+- En cas de :
+  - passage au plan Pro,
+  - ouverture à plusieurs comptes (ex. plusieurs admins ou éditeurs),
+  
+  il est **recommandé d’activer** cette option pour renforcer la sécurité.Row Level Security (RLS) – tables principales
 
 Le repository ne peut pas lire la configuration RLS réelle du projet Supabase, mais le code front suppose :
 
