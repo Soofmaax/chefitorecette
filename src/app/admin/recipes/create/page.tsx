@@ -135,7 +135,7 @@ const AdminCreateRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm&lt;RecipeFormValues&gt;({
+  } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",

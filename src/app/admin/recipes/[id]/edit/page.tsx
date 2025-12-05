@@ -128,7 +128,7 @@ const fetchRecipeCuisines = async (): Promise<string[]> => {
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
 
-const difficultyTemplates: Record&lt;string, string&gt; = {
+const difficultyTemplates: Record<string, string> = {
   beginner:
     "Recette accessible aux débutants, avec peu d'étapes techniques. Le principal enjeu est de respecter les temps et les températures de cuisson.",
   intermediate:
