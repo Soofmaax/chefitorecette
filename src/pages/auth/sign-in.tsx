@@ -14,6 +14,7 @@ const SignInPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberEmail, setRememberEmail] = useState(true);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
 
   const {
     register,
@@ -43,7 +44,7 @@ const SignInPage = () => {
     }
   }, [user, router]);
 
-  const onSubmit = async (values: SignInFormValues) => {
+  const onSubmit = (values: SignInFormValues) => {
     setErrorMessage(null);
 
     if (typeof window !== "undefined") {
@@ -54,16 +55,48 @@ const SignInPage = () => {
       }
     }
 
-    const { error } = await signInWithEmail(values.email, values.password);
+    const timeoutMs = 15000;
+    setAuthSubmitting(true);
 
-    if (error) {
-      // Message volontairement générique pour ne pas donner d'indication
-      // sur l'existence du compte ou la nature de l'erreur.
-      setErrorMessage("Identifiants invalides. Merci de réessayer.");
-      return;
-    }
+    Promise.race([
+      signInWithEmail(values.email, values.password),
+      new Promise<{ data: null; error: Error }>((resolve) =>
+        setTimeout(
+          () =>
+            resolve({
+              data: null,
+              error: new Error("signIn timeout")
+            }),
+          timeoutMs
+        )
+      )
+    ])
+      .then((result) => {
+        if (result.error) {
+          // Message volontairement générique pour ne pas donner d'indication
+          // sur l'existence du compte ou la nature de l'erreur.
+          const isTimeoutError =
+            result.error instanceof Error &&
+            result.error.message === "signIn timeout";
 
-    router.replace("/dashboard");
+          setErrorMessage(
+            isTimeoutError
+              ? "La connexion est trop lente. Merci de réessayer."
+              : "Identifiants invalides. Merci de réessayer."
+          );
+          return;
+        }
+
+        router.replace("/dashboard");
+      })
+      .catch(() => {
+        setErrorMessage(
+          "Une erreur est survenue pendant la connexion. Merci de réessayer."
+        );
+      })
+      .finally(() => {
+        setAuthSubmitting(false);
+      });
   };
 
   return (
@@ -135,9 +168,9 @@ const SignInPage = () => {
             type="submit"
             variant="primary"
             className="w-full justify-center"
-            disabled={isSubmitting}
+            disabled={isSubmitting || authSubmitting}
           >
-            {isSubmitting ? (
+            {isSubmitting || authSubmitting ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />
                 Connexion…
