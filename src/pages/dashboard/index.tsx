@@ -114,47 +114,40 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Métriques d'intégrations / performance */}
-      {stats.performance && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="card px-4 py-4">
-            <p className="text-xs uppercase tracking-wide text-slate-400">
-              Redis Cache
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-50">
-              {Math.round(stats.performance.cacheHitRatio * 100)}%
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Taux de hit cache estimé (hitRatio)
-            </p>
-          </div>
-
-          <div className="card px-4 py-4">
-            <p className="text-xs uppercase tracking-wide text-slate-400">
-              S3 Vectors
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-50">
-              {stats.performance.s3StorageUsed}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Indicateur d’utilisation du stockage S3 (unité dépend de
-              l’implémentation de l’Edge Function).
-            </p>
-          </div>
-
-          <div className="card px-4 py-4">
-            <p className="text-xs uppercase tracking-wide text-slate-400">
-              Vault Security
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-50">
-              {stats.performance.encryptedData}
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Objets chiffrés via Vault (rag_embeddings).
-            </p>
-          </div>
+      {/* Métriques d'intégrations / performance (placeholder simplifié) */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="card px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            Redis Cache
+          </p>
+          <p className="mt-2 text-sm text-slate-200">
+            Intégration Redis prête côté code. Les métriques détaillées
+            (taux de hit cache, etc.) peuvent être activées une fois les
+            fonctions Edge déployées et configurées.
+          </p>
         </div>
-      )}
+
+        <div className="card px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            S3 Vectors
+          </p>
+          <p className="mt-2 text-sm text-slate-200">
+            Stockage de vecteurs dans S3 supporté via fonctions Edge. Cette
+            tuile sert de rappel de l&apos;intégration sans exposer de métriques
+            chiffrées.
+          </p>
+        </div>
+
+        <div className="card px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            Vault Security
+          </p>
+          <p className="mt-2 text-sm text-slate-200">
+            Vault peut être utilisé pour chiffrer des métadonnées sensibles.
+            Les compteurs détaillés seront à réactiver si besoin.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

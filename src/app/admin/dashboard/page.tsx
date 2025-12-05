@@ -146,18 +146,13 @@ const AdminDashboardPage = () => {
           <p className="text-xs uppercase tracking-wide text-slate-400">
             Embeddings &amp; intégrations
           </p>
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-            <span>
-              Cache hit Redis&nbsp;:
-              {Math.round((stats.performance?.cacheHitRatio ?? 0) * 100)}%
-            </span>
-            <span>
-              Données chiffrées&nbsp;:
-              {stats.performance?.encryptedData ?? 0}
-            </span>
-          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Ce panneau résume l&apos;état des intégrations RAG (Redis, S3, Vault)
+            lorsque les métriques avancées sont disponibles.
+          </p>
           <p className="mt-2 text-xs text-slate-500">
-            Indicateurs issus des fonctions Edge Redis / S3 / Vault.
+            Les métriques détaillées (taux de hit cache, objets chiffrés, etc.)
+            sont actuellement désactivées dans ce déploiement.
           </p>
         </div>
       </div>

@@ -77,7 +77,7 @@ type Utensil = {
   label: string;
 };
 
-const DIETARY_LABELS_OPTIONS = [
+const DIETARY_LABEL_OPTIONS = [
   { value: "vegetarien", label: "Végétarien" },
   { value: "vegetalien", label: "Végétalien" },
   { value: "vegan", label: "Végan" },
@@ -224,7 +224,7 @@ const AdminEditRecipePage = () => {
     watch,
     setValue,
     formState: { errors, isSubmitting }
-  } = useForm&lt;RecipeFormValues&gt;({
+  } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues: {
       title: "",
@@ -304,11 +304,6 @@ const AdminEditRecipePage = () => {
       return (data as { id: string }[]) ?? [];
     },
     enabled: !!id
-  });
-
-  const { data: allCategories = [] } = useQuery({
-    queryKey: ["recipes-categories-all"],
-    queryFn: fetchRecipeCategories
   });
 
   const { data: allCuisines = [] } = useQuery({
