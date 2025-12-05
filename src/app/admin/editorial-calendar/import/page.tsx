@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type CsvRow = Record<string, string>;
 
@@ -213,6 +214,7 @@ const buildImportRows = (
 
 const AdminEditorialImportPage = () => {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -252,6 +254,18 @@ const AdminEditorialImportPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["editorial-calendar"] });
+      showToast({
+        type: "success",
+        message: "Import CSV éditorial terminé avec succès."
+      });
+    },
+    onError: (err: any) => {
+      const msg =
+        err?.message ?? "Erreur lors de l'import CSV éditorial.";
+      showToast({
+        type: "error",
+        message: msg
+      });
     }
   });
 

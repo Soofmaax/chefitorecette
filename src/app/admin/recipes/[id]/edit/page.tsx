@@ -16,6 +16,7 @@ import {
   computePrePublishIssues
 } from "@/lib/recipesQuality";
 import { difficultyTemplates } from "@/lib/recipesDifficulty";
+import { useToast } from "@/components/ui/ToastProvider";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
 import { triggerEmbedding } from "@/lib/embeddings";
@@ -364,6 +365,27 @@ const AdminEditRecipePage = () => {
     enabled: !!id
   });
 
+  const { data: editorialLinks = [] } = useQuery({
+    queryKey: ["recipe-editorial-links", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("editorial_calendar")
+        .select("id, title, target_month, status")
+        .eq("recipe_id", id)
+        .order("target_month", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (
+        (data as { id: string; title: string; target_month: string; status: string }[]) ??
+        []
+      );
+    },
+    enabled: !!id
+  });
+
   const [selectedUtensils, setSelectedUtensils] = useState<string[]>([]);
 
   useEffect(() => {
@@ -639,15 +661,23 @@ const AdminEditRecipePage = () => {
         }
       }
 
-      setMessage(
-        "Recette mise à jour. Pensez à recalculer l’embedding si le contenu a beaucoup changé."
-      );
+      const successMsg =
+        "Recette mise à jour. Pensez à recalculer l’embedding si le contenu a beaucoup changé.";
+      setMessage(successMsg);
+      showToast({
+        type: "success",
+        message: successMsg
+      });
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
-      setErrorMessage(
-        err?.message ?? "Erreur lors de la mise à jour de la recette."
-      );
+      const msg =
+        err?.message ?? "Erreur lors de la mise à jour de la recette.";
+      setErrorMessage(msg);
+      showToast({
+        type: "error",
+        message: msg
+      });
     }
   };
 
@@ -665,17 +695,23 @@ const AdminEditRecipePage = () => {
       if (error) {
         throw error;
       }
+      showToast({
+        type: "success",
+        message: "Recette supprimée."
+      });
       router.push("/admin/recipes");
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
-      setErrorMessage(
-        err?.message ?? "Erreur lors de la suppression de la recette."
-      );
+      const msg =
+        err?.message ?? "Erreur lors de la suppression de la recette.";
+      setErrorMessage(msg);
+      showToast({
+        type: "error",
+        message: msg
+      });
     }
   };
-
-  const handleDuplicate = async () => {
     if (!recipe) return;
 
     setMessage(null);
@@ -706,13 +742,21 @@ const AdminEditRecipePage = () => {
       await triggerEmbedding("recipe", inserted.id as string);
 
       setMessage("Variante créée et embedding déclenché.");
+      showToast({
+        type: "success",
+        message: "Variante créée et embedding déclenché."
+      });
       router.push(`/admin/recipes/${inserted.id}/edit`);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
-      setErrorMessage(
-        err?.message ?? "Erreur lors de la duplication de la recette."
-      );
+      const msg =
+        err?.message ?? "Erreur lors de la duplication de la recette.";
+      setErrorMessage(msg);
+      showToast({
+        type: "error",
+        message: msg
+      });
     }
   };
 
@@ -723,13 +767,22 @@ const AdminEditRecipePage = () => {
 
     try {
       await triggerEmbedding("recipe", id);
-      setMessage("Embedding déclenché pour cette recette.");
+      const msg = "Embedding déclenché pour cette recette.";
+      setMessage(msg);
+      showToast({
+        type: "success",
+        message: msg
+      });
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error(err);
-      setErrorMessage(
-        err?.message ?? "Erreur lors du déclenchement de l’embedding."
-      );
+      const msg =
+        err?.message ?? "Erreur lors du déclenchement de l’embedding.";
+      setErrorMessage(msg);
+      showToast({
+        type: "error",
+        message: msg
+      });
     }
   };
 
@@ -823,6 +876,7 @@ const AdminEditRecipePage = () => {
   const stepsPresent = stepsCount > 0;
   const seoComplete =
     isNonEmpty(recipe.meta_title) && isNonEmpty(recipe.meta_description);
+  const editorialLinksCount = editorialLinks?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -854,6 +908,16 @@ const AdminEditRecipePage = () => {
               onClick={() => router.push(`/admin/recipes/${id}/preview`)}
             >
               Prévisualiser la page publique
+            </Button>
+          )}
+          {editorialLinksCount > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-xs"
+              onClick={() => router.push("/admin/editorial-calendar")}
+            >
+              Voir dans le calendrier éditorial
             </Button>
           )}
           <Button

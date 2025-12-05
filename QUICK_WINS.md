@@ -34,53 +34,56 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ---
 
-## 3. StaleTime pour les données quasi-statiques (React Query)
+## 3. StaleTime pour les données quasi-statiques (React Query) ✅ **(implémenté)**
 
 - **Description**  
   Éviter les requêtes répétées pour les données stables (catégories, cuisines, knowledge base, audio library).
-- **Effort estimé** : 20–30 min  
+- **Statut** : réalisé  
+  - `staleTime: 10 * 60 * 1000` ajouté sur :
+    - les listes de catégories et de cuisines utilisées sur `/admin/recipes`,
+    - la base de connaissances (`/admin/knowledge`),
+    - la bibliothèque audio et les mappings (`/admin/audio`).
+
 - **Impact** : moyen (performance, confort d’utilisation)
-- **Détails** :
-  - Ajouter `staleTime: 5 * 60 * 1000` ou `10 * 60 * 1000` dans :
-    - `useQuery` sur `fetchCategories`, `fetchCuisines`,
-    - `/admin/knowledge`, `/admin/audio`.
-  - Optionnel : `cacheTime` plus long pour ces listes.
 
 ---
 
-## 4. Bouton “Réinitialiser les filtres” sur `/admin/recipes`
+## 4. Bouton “Réinitialiser les filtres” sur `/admin/recipes` ✅ **(implémenté)**
 
 - **Description**  
   Ajouter un bouton unique pour remettre tous les filtres (`statusFilter`, `difficultyFilter`, `categoryFilter`, `cuisineFilter`, `ragFilter`, `search`, `slugOrId`) à leurs valeurs par défaut.
-- **Effort estimé** : 20–30 min  
+- **Statut** : réalisé  
+  - Fonction `resetFilters()` ajoutée dans `src/app/admin/recipes/page.tsx` pour remettre tous les filtres à leur valeur initiale.
+  - Bouton “Réinitialiser les filtres” ajouté dans la barre de filtres de la page `/admin/recipes`.
+
 - **Impact** : élevé (UX quotidienne pour les éditeurs)
-- **Détails** :
-  - Ajouter une fonction `resetFilters()` qui remet les `useState` aux valeurs initiales.
-  - Bouton dans la barre de filtres avec un label type “Réinitialiser les filtres”.
 
 ---
 
-## 5. Bouton “Réinitialiser les filtres” sur `/admin/editorial-calendar`
+## 5. Bouton “Réinitialiser les filtres” sur `/admin/editorial-calendar` ✅ **(implémenté)**
 
 - **Description**  
   Même principe que pour les recettes : remettre `statusFilter`, `categoryFilter`, `difficultyFilter`, `monthFilter`, `priorityFilter`, `search`.
-- **Effort estimé** : 20–30 min  
+- **Statut** : réalisé  
+  - Fonction `resetFilters()` ajoutée dans `src/app/admin/editorial-calendar/page.tsx` pour remettre tous les filtres à `"all"` et vider la recherche.
+  - Bouton “Réinitialiser les filtres” ajouté à côté de la barre de recherche sur `/admin/editorial-calendar`.
+
 - **Impact** : moyen/élevé (productivité sur le calendrier)
-- **Détails** :
-  - Ajouter `resetFilters()` qui remet tous les filtres à `"all"` et vide la barre de recherche.
-  - Bouton à côté des filtres existants.
 
 ---
 
-## 6. Auto-remplissage de `difficulty_detailed` dans la page de création de recette
+## 6. Auto-remplissage de `difficulty_detailed` dans la page de création de recette ✅ **(implémenté)**
 
 - **Description**  
   La page d’édition (`[id]/edit`) pré-remplit déjà `difficulty_detailed` à partir de `difficulty` via des templates. Répliquer ce comportement sur `/admin/recipes/create`.
-- **Effort estimé** : 20–30 min  
+- **Statut** : réalisé  
+  - Nouveau module `src/lib/recipesDifficulty.ts` exportant `difficultyTemplates`.
+  - Le module est utilisé :
+    - dans `/admin/recipes/[id]/edit` (pour l’édition),
+    - dans `/admin/recipes/create` (pour la création).
+  - La page de création pré-remplit automatiquement `difficulty_detailed` en fonction de la difficulté choisie.
+
 - **Impact** : moyen (cohérence UX, gain de temps pour les éditeurs)
-- **Détails** :
-  - Reprendre `difficultyTemplates` utilisé dans l’edit ou l’extraire dans un module (`lib/recipesDifficulty.ts`).
-  - Ajouter un `watch("difficulty")` + `useEffect` similaire dans la page create.
 
 ---
 
