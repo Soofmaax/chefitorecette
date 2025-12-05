@@ -90,7 +90,7 @@ interface CuisineRow {
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
 
-const getPremiumMissing = (recipe: AdminRecipe): string[] => {
+const getRecipeMissingFields = (recipe: AdminRecipe): string[] => {
   const missing: string[] = [];
 
   if (recipe.status !== "published") {
@@ -144,11 +144,11 @@ const getPremiumMissing = (recipe: AdminRecipe): string[] => {
 };
 
 const isCompleteRecipe = (recipe: AdminRecipe): boolean => {
-  return getPremiumMissing(recipe).length === 0;
+  return getRecipeMissingFields(recipe).length === 0;
 };
 
 const computeMissingFields = (recipe: AdminRecipe): string[] => {
-  return getPremiumMissing(recipe);
+  return getRecipeMissingFields(recipe);
 };
 
 const fetchRecipes = async (
@@ -470,11 +470,11 @@ const AdminRecipesPage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-          Recettes – Mode enrichi
-        </h1>
+            Recettes – Mode enrichi
+          </h1>
           <p className="mt-1 text-sm text-slate-400">
             Filtrez et enrichissez les recettes existantes avec des contenus
-            premium (science, audio, SEO).
+            enrichis (science, audio, SEO).
           </p>
           {total > 0 && (
             <p className="mt-1 text-xs text-slate-500">
@@ -643,7 +643,7 @@ const AdminRecipesPage = () => {
               ) : (
                 filteredRecipes.map(({ recipe, ragInfo }) => {
                   const missing = computeMissingFields(recipe);
-                  const enriched = isEnrichedPremium(recipe);
+                  const enriched = isCompleteRecipe(recipe);
                   const ragLabel =
                     ragInfo.status === "complete"
                       ? "RAG complet"
@@ -691,7 +691,7 @@ const AdminRecipesPage = () => {
                         <div className="flex flex-wrap gap-1">
                           {enriched && (
                             <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                              ✅ enrichie
+                              ✅ complète
                             </span>
                           )}
                           {!enriched && (

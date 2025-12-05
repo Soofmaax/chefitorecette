@@ -26,6 +26,23 @@ export const recipeSchema = z.object({
     .number()
     .int()
     .min(1, "Nombre de portions invalide"),
+  rest_time_min: z.coerce
+    .number()
+    .int()
+    .min(0, "Temps de repos invalide")
+    .default(0),
+
+  storage_duration_days: z.coerce
+    .number()
+    .int()
+    .min(0, "Durée de conservation invalide")
+    .optional(),
+
+  storage_instructions: z.string().optional().or(z.literal("")),
+
+  serving_temperature: z
+    .enum(["chaud", "tiede", "ambiante", "froid"])
+    .optional(),
 
   difficulty: z.enum(["beginner", "intermediate", "advanced"], {
     required_error: "Difficulté requise"

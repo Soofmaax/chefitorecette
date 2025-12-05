@@ -54,7 +54,7 @@ Liste des améliorations et chantiers restant à mener, classés par priorité.
   - Intégrer l’écriture des logs dans les routes ou dans des triggers SQL.
 
 - **Refactor / factorisation**
-  - Factoriser les helpers de “statut premium” (actuellement dupliqués entre la liste et l’éditeur de recette).
+  - Factoriser les helpers de qualité éditoriale (actuellement dupliqués entre la liste et l’éditeur de recette).
   - Extraire la logique de construction JSON-LD pour la rendre réutilisable côté front public.
 
 Ce fichier est volontairement court et pragmatique : il sert de backlog minimal pour les prochaines itérations produit / sécurité.  

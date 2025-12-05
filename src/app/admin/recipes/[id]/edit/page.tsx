@@ -39,7 +39,7 @@ const fetchRecipeById = async (id: string) => {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, slug, title, description, image_url, prep_time_min, cook_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
+      "id, slug, title, description, image_url, prep_time_min, cook_time_min, rest_time_min, servings, difficulty, category, cuisine, tags, dietary_labels, status, publish_at, ingredients_text, instructions_detailed, chef_tips, cultural_history, techniques, source_info, difficulty_detailed, nutritional_notes, storage_instructions, storage_duration_days, serving_temperature, meta_title, meta_description, canonical_url, og_image_url, embedding, schema_jsonld_enabled"
     )
     .eq("id", id)
     .single();
@@ -110,7 +110,7 @@ const DIETARY_LABEL_OPTIONS = [
   { value: "casher", label: "Casher" }
 ];
 
-const getPremiumMissing = (recipe: any): string[] => {
+const getRecipeMissingFields = (recipe: any): string[] => {
   const missing: string[] = [];
 
   if (recipe.status !== "published") {
@@ -189,6 +189,7 @@ const AdminEditRecipePage = () => {
       image_url: "",
       prep_time_min: 0,
       cook_time_min: 0,
+      rest_time_min: 0,
       servings: 1,
       difficulty: "beginner",
       category: "",
@@ -205,6 +206,9 @@ const AdminEditRecipePage = () => {
       source_info: "",
       difficulty_detailed: "",
       nutritional_notes: "",
+      storage_instructions: "",
+      storage_duration_days: undefined,
+      serving_temperature: undefined,
       meta_title: "",
       meta_description: "",
       canonical_url: "",
@@ -310,6 +314,7 @@ const AdminEditRecipePage = () => {
         image_url: recipe.image_url ?? "",
         prep_time_min: recipe.prep_time_min ?? 0,
         cook_time_min: recipe.cook_time_min ?? 0,
+        rest_time_min: recipe.rest_time_min ?? 0,
         servings: recipe.servings ?? 1,
         difficulty: recipe.difficulty ?? "beginner",
         category: recipe.category ?? "",
@@ -328,6 +333,9 @@ const AdminEditRecipePage = () => {
         source_info: recipe.source_info ?? "",
         difficulty_detailed: recipe.difficulty_detailed ?? "",
         nutritional_notes: recipe.nutritional_notes ?? "",
+        storage_instructions: recipe.storage_instructions ?? "",
+        storage_duration_days: recipe.storage_duration_days ?? undefined,
+        serving_temperature: recipe.serving_temperature ?? undefined,
         meta_title: recipe.meta_title ?? "",
         meta_description: recipe.meta_description ?? "",
         canonical_url: recipe.canonical_url ?? "",
@@ -487,7 +495,7 @@ const AdminEditRecipePage = () => {
         setPrePublishIssues(issues);
         setShowPrePublishModal(true);
         setErrorMessage(
-          "Publication bloquée : certains éléments premium sont manquants."
+          "Publication bloquée : certains éléments obligatoires sont manquants."
         );
         return;
       }
@@ -519,6 +527,7 @@ const AdminEditRecipePage = () => {
         image_url: imageUrlToSave,
         prep_time_min: values.prep_time_min,
         cook_time_min: values.cook_time_min,
+        rest_time_min: values.rest_time_min,
         servings: values.servings,
         difficulty: values.difficulty,
         category: values.category,
@@ -538,6 +547,12 @@ const AdminEditRecipePage = () => {
         source_info: values.source_info || null,
         difficulty_detailed: values.difficulty_detailed || null,
         nutritional_notes: values.nutritional_notes || null,
+        storage_instructions: values.storage_instructions || null,
+        storage_duration_days:
+          typeof values.storage_duration_days === "number"
+            ? values.storage_duration_days
+            : null,
+        serving_temperature: values.serving_temperature || null,
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
@@ -648,7 +663,11 @@ const AdminEditRecipePage = () => {
     }
   };
 
-  const premiumMissing = useMemo(
+  const missingFields = useMemo(
+    () => (recipe ? getRecipeMissingFields(recipe) : []),
+    [recipe]
+  );
+  const isComplete = missingFields.length === 0;emiumMissing = useMemo(
     () => (recipe ? getPremiumMissing(recipe) : []),
     [recipe]
   );
@@ -791,9 +810,9 @@ const AdminEditRecipePage = () => {
                 </span>
               )}
             </p>
-            {premiumMissing.length > 0 && (
+            {missingFields.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
-                {premiumMissing.map((label) => (
+                {missingFields.map((label) => (
                   <span
                     key={label}
                     className="rounded bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200"
@@ -1050,6 +1069,20 @@ const AdminEditRecipePage = () => {
             </div>
 
             <div>
+              <label htmlFor="rest_time_min">Repos (min)</label>
+              <input
+                id="rest_time_min"
+                type="number"
+                className="mt-1 w-full"
+                min={0}
+                {...register("rest_time_min", { valueAsNumber: true })}
+              />
+              {errors.rest_time_min && (
+                <p className="form-error">{errors.rest_time_min.message}</p>
+              )}
+            </div>
+
+            <div>
               <label htmlFor="servings">Portions</label>
               <input
                 id="servings"
@@ -1170,6 +1203,62 @@ const AdminEditRecipePage = () => {
                   {errors.dietary_labels.message as string}
                 </p>
               )}
+            </div>
+          </div>
+        </section>
+
+        {/* Onglet 2bis : Repos & conservation */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            2bis. Repos &amp; conservation
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label htmlFor="storage_duration_days">
+                Durée de conservation (jours)
+              </label>
+              <input
+                id="storage_duration_days"
+                type="number"
+                className="mt-1 w-full"
+                min={0}
+                {...register("storage_duration_days", {
+                  valueAsNumber: true
+                })}
+              />
+              {errors.storage_duration_days && (
+                <p className="form-error">
+                  {errors.storage_duration_days.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="serving_temperature">
+                Température de service
+              </label>
+              <select
+                id="serving_temperature"
+                className="mt-1 w-full"
+                {...register("serving_temperature")}
+              >
+                <option value="">—</option>
+                <option value="chaud">Chaude</option>
+                <option value="tiede">Tiède</option>
+                <option value="ambiante">À température ambiante</option>
+                <option value="froid">Froide / réfrigérée</option>
+              </select>
+            </div>
+            <div className="md:col-span-3">
+              <label htmlFor="storage_instructions">
+                Conseils de conservation
+              </label>
+              <textarea
+                id="storage_instructions"
+                rows={3}
+                className="mt-1 w-full"
+                placeholder="Par exemple : se conserve 2 jours au réfrigérateur dans un contenant hermétique…"
+                {...register("storage_instructions")}
+              />
             </div>
           </div>
         </section>

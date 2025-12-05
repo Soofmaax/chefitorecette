@@ -4,14 +4,14 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ---
 
-## 1. Factoriser la logique “recette premium”
+## 1. Factoriser la logique de “recette complète”
 
 - **Description**  
-  Extraire `getPremiumMissing` et la logique associée (liste / edit) dans un module unique, par ex. `src/lib/recipesPremium.ts`.
+  Extraire `getRecipeMissingFields` et la logique associée (liste / edit) dans un module unique, par ex. `src/lib/recipesQuality.ts`.
 - **Effort estimé** : 30–45 min  
 - **Impact** : élevé (maintenabilité, cohérence métier)
 - **Détails** :
-  - Exporter une fonction `getPremiumMissing(recipe)` avec un type partagé.
+  - Exporter une fonction `getRecipeMissingFields(recipe)` avec un type partagé.
   - L’utiliser dans :
     - `src/app/admin/recipes/page.tsx`
     - `src/app/admin/recipes/[id]/edit/page.tsx`
@@ -140,7 +140,7 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ## Ordre recommandé d’implémentation
 
-1. Factoriser la logique “recette premium” (Quick Win 1).  
+1. Factoriser la logique de “recette complète” (Quick Win 1).  
 2. Auto-remplissage `difficulty_detailed` dans la page create (Quick Win 6).  
 3. Boutons “Réinitialiser les filtres” (Quick Wins 4 & 5).  
 4. Typer les stats Redis/S3/Vault (Quick Win 2).  

@@ -42,7 +42,7 @@ Ce fichier liste les changements notables apportés au backoffice Chefito.
 
 - **Validation pre-publish bloquante** :
   - Sur `/admin/recipes/[id]/edit`, avant d’accepter `status = 'published'` :
-    - Vérifie la présence des champs premium éditoriaux & SEO, ainsi que :
+    - Vérifie la présence des champs éditoriaux & SEO indispensables, ainsi que :
       - ≥ 3 ingrédients normalisés,
       - ≥ 3 étapes enrichies,
       - ≥ 1 concept scientifique lié.
@@ -87,7 +87,7 @@ Ce fichier liste les changements notables apportés au backoffice Chefito.
 
 ## 0.1.0 – Version initiale (rappel)
 
-- Admin premium Next.js 15 pour les recettes :
+- Admin Next.js 15 pour les recettes enrichies :
   - Liste des recettes avec filtres, recherche et pagination.
   - Édition complète d’une recette (texte, SEO, image, statut).
   - Ingrédients normalisés (`recipe_ingredients_normalized`).

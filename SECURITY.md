@@ -376,7 +376,7 @@ Non implémenté directement dans ce repo (à gérer au niveau infra / reverse p
 - [x] Uploads image/audio avec validation type + taille.
 - [x] Secrets non committés (`.env` ignoré).
 - [x] Validation forte des payloads (Zod) sur les entrées critique.
-- [x] Validation pre-publish bloquante pour les recettes premium.
+- [x] Validation pre-publish bloquante pour les recettes publiées (qualité éditoriale minimale).
 
 Pour tout nouveau développement :
 

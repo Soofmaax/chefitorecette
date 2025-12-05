@@ -11,7 +11,7 @@ _Auteur :_ Cosine / Genie (audit automatisé basé sur le code du repo)
 
 Le backoffice Chefito est globalement **bien structuré, typé, sécurisé et cohérent** :
 
-- Architecture claire : séparation `app` (admin premium) / `pages` (legacy), `lib`, `hooks`, `components`.
+- Architecture claire : séparation `app` (admin recettes enrichies) / `pages` (legacy), `lib`, `hooks`, `components`.
 - **TypeScript strict** (aucun `tsc` error), Zod utilisé sur tous les formulaires critiques.
 - **ESLint (next/core-web-vitals)** : 0 erreurs/avertissements.
 - **CI GitHub Actions** : lint + typecheck + build + audit + CodeQL dans un workflow unique.
@@ -70,10 +70,10 @@ Les principaux **points d’attention avant production** :
 
 **Points perfectibles**
 
-- **Duplication de logique “premium”**
-  - `getPremiumMissing` est défini à la fois dans `src/app/admin/recipes/page.tsx` et dans `src/app/admin/recipes/[id]/edit/page.tsx` (version légèrement différente).
-  - Risque de divergence à moyen terme.
-  - ✅ Recommandation : factoriser dans `src/lib/premium.ts` ou `src/lib/recipes.ts`.
+- **Duplication de logique de qualité éditoriale**
+- `getRecipeMissingFields` est défini à la fois dans `src/app/admin/recipes/page.tsx` et dans `src/app/admin/recipes/[id]/edit/page.tsx` (version légèrement différente).
+- Risque de divergence à moyen terme.
+- ✅ Recommandation : factoriser dans `src/lib/recipesQuality.ts` ou `src/lib/recipes.ts`.
 - **TODOs**
   - Centralisés dans `TODO.md`, ce qui est bien.
   - Pas de `// TODO` dispersés dans le code → bonne discipline.
@@ -185,7 +185,7 @@ Les principaux **points d’attention avant production** :
   - `.env.example` documenté, `.env` ignoré par Git.
   - Service role jamais utilisé côté client.
 - **Pre-publish blocking** :
-  - empêche la publication d’une recette incomplète (critères premium + contraintes RAG minimales).
+- empêche la publication d’une recette incomplète (critères éditoriaux/SEO + contraintes RAG minimales).
 
 **Points de vigilance**
 
@@ -248,7 +248,7 @@ Les principaux **points d’attention avant production** :
    - Import CSV éditorial (cas succès + erreurs).
    - Fusion de recettes (admin vs non-admin).
 2. **Tests unitaires ciblés** :
-   - `getPremiumMissing`, `computePrePublishIssues`,
+   - `getRecipeMissingFields`, `computePrePublishIssues`,
    - `buildRecipeJsonLd` + `validateRecipeJsonLd`,
    - helpers d’import CSV (`parseCsv`, `buildImportRows`).
 
@@ -284,8 +284,8 @@ Les principaux **points d’attention avant production** :
    - Injecter `<script type="application/ld+json">` par recette.
 2. **Tests E2E de base**
    - 3–5 scénarios de bout en bout suffisent pour commencer.
-3. **Refactor “premium status”**
-   - Extraire `getPremiumMissing` et `computePrePublishIssues` dans un module partagé pour garantir l’alignement.
+3. **Refactor logique de qualité éditoriale**
+- Extraire `getRecipeMissingFields` et `computePrePublishIssues` dans un module partagé pour garantir l’alignement.
 
 ### Priorité moyenne
 

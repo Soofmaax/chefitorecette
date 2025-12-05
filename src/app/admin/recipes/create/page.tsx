@@ -105,6 +105,7 @@ const AdminCreateRecipePage = () => {
       image_url: "",
       prep_time_min: 0,
       cook_time_min: 0,
+      rest_time_min: 0,
       servings: 1,
       difficulty: "beginner",
       category: "",
@@ -121,6 +122,9 @@ const AdminCreateRecipePage = () => {
       source_info: "",
       difficulty_detailed: "",
       nutritional_notes: "",
+      storage_instructions: "",
+      storage_duration_days: undefined,
+      serving_temperature: undefined,
       meta_title: "",
       meta_description: "",
       canonical_url: "",
@@ -238,6 +242,7 @@ const AdminCreateRecipePage = () => {
         image_url: imageUrlToSave,
         prep_time_min: values.prep_time_min,
         cook_time_min: values.cook_time_min,
+        rest_time_min: values.rest_time_min,
         servings: values.servings,
         difficulty: values.difficulty,
         category: values.category,
@@ -257,6 +262,12 @@ const AdminCreateRecipePage = () => {
         source_info: values.source_info || null,
         difficulty_detailed: values.difficulty_detailed || null,
         nutritional_notes: values.nutritional_notes || null,
+        storage_instructions: values.storage_instructions || null,
+        storage_duration_days:
+          typeof values.storage_duration_days === "number"
+            ? values.storage_duration_days
+            : null,
+        serving_temperature: values.serving_temperature || null,
         meta_title: values.meta_title || null,
         meta_description: values.meta_description || null,
         canonical_url: values.canonical_url || null,
@@ -284,7 +295,9 @@ const AdminCreateRecipePage = () => {
           .eq("id", editorialId);
       }
 
-      setMessage("Recette créée. Vous pouvez maintenant l'enrichir en mode premium.");
+      setMessage(
+        "Recette créée. Vous pouvez maintenant l'enrichir et la compléter dans l'éditeur détaillé."
+      );
       router.push(`/admin/recipes/${inserted.id}/edit`);
     } catch (err: any) {
       // eslint-disable-next-line no-console
@@ -304,8 +317,8 @@ const AdminCreateRecipePage = () => {
           </h1>
           <p className="mt-1 text-sm text-slate-400">
             Crée une fiche recette brouillon à partir d&apos;une ligne du
-            calendrier éditorial, puis passe en mode premium dans l&apos;éditeur
-            détaillé.
+            calendrier éditorial, puis continue son enrichissement dans
+            l&apos;éditeur détaillé.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

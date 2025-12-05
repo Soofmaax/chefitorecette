@@ -165,8 +165,8 @@ En prod :
 - [ ] **Validation pre-publish**
   - Essayer de passer directement une recette en `published` avec des champs manquants.
   - Vérifier que la modale de blocage s’ouvre avec la liste des critères manquants.
-- [ ] **Recette premium complète**
-  - Remplir tous les champs premium + ingrédients normalisés + steps enrichies + concepts.
+- [ ] **Recette complète (éditoriale + RAG)**
+  - Remplir tous les champs éditoriaux & SEO requis + ingrédients normalisés + steps enrichies + concepts.
   - Passer le statut en `published` → succès.
 
 ### 5.2. Flux Auth / Mot de passe
@@ -264,7 +264,7 @@ En prod :
   - Pas de collecte de données personnelles inutiles.
   - Eventuellement suivre :
     - ouverture des pages clés,
-    - taux de complétion sur certaines actions (import CSV, enrichissement premium…).
+    - taux de complétion sur certaines actions (import CSV, enrichissement des fiches recettes…).
 
 ---
 
