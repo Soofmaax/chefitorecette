@@ -2,6 +2,62 @@
 
 Ce fichier liste les changements notables apportés au backoffice Chefito.
 
+## 0.4.0 – Imports CSV complets & documentation alignée
+
+### Imports CSV catalogues (full backoffice sans script local)
+
+- **Ingrédients**  
+  - Nouvelle page `/admin/ingredients/import` :
+    - Upload d’un CSV (séparateur `,` ou `;`).
+    - Mapping automatique + manuel des colonnes (`canonical_name`, `display_name`, `category`, `scientific_name`, `audio_key`).
+    - Prévisualisation des lignes, distinction lignes valides / invalides.
+    - Upsert Supabase sur `ingredients_catalog.canonical_name` (INSERT ou UPDATE sans doublon).
+- **Ustensiles**  
+  - Nouvelle page `/admin/utensils/import` :
+    - CSV minimal `key` + `label`.
+    - Mapping et prévisualisation comme pour les ingrédients.
+    - Upsert Supabase sur `utensils_catalog.key`.
+- **Knowledge base (concepts scientifiques)**  
+  - Nouvelle page `/admin/knowledge/import` :
+    - CSV mappé vers `concept_key`, `title`, `category`, `work_status`, `difficulty_level`, `usage_priority`, `short_definition`, `long_explanation`, `synonyms`.
+    - Support des valeurs de difficulté en texte (`beginner`, `intermediate`, `advanced` / FR) ou numériques (1–3).
+    - Upsert Supabase sur `knowledge_base.concept_key`.
+
+Ces trois imports permettent de gérer l’ensemble des référentiels (ingrédients, ustensiles, concepts) **exclusivement via l’admin**, sans script Node local.
+
+### Alignement base de données
+
+- `knowledge_base` enrichie avec les colonnes :
+  - `short_definition` (résumé),
+  - `long_explanation` (explication détaillée),
+  - `synonyms` (`text[]`).
+- Script SQL dédié : `sql/knowledge_base_enrich.sql`.
+
+### Documentation mise à jour
+
+- `readme.md` :
+  - Sections complètes pour :
+    - 3.3 Alertes de similarité & gestion des doublons,
+    - 3.4 Bibliothèque d’ingrédients (incluant import CSV),
+    - 3.5 Knowledge base (imports CSV + mapping),
+    - 3.6 Concepts scientifiques liés à une recette,
+    - 3.7 Gestion audio,
+    - 3.8 Calendrier éditorial & import CSV,
+    - 3.9 SEO avancé & JSON-LD Recipe.
+  - Sections ajoutées :
+    - 4. Partie historique : back-office HTML minimal,
+    - 5. Résumé opérationnel (workflow complet admin),
+    - 6. Architecture – vue d’ensemble,
+    - 7. Guide de prise en main en 5 minutes,
+    - 8. Installation & exécution locale,
+    - 9. Configuration Supabase & environnement,
+    - 10. Déploiement (avec lien vers `PRODUCTION_CHECKLIST.md`).
+- `AUDIT_FINAL.md`, `PRODUCTION_CHECKLIST.md`, `SECURITY.md`, `TODO.md`, `QUICK_WINS.md` :
+  - Relisent tous le même modèle :
+    - backoffice = outil interne pour enrichir les recettes et préparer le RAG,
+    - catalogues gérés via les pages d’import CSV,
+    - RLS & policies Supabase comme référence de sécurité.
+
 ## 0.3.0 – Alignement audit, UX RAG et ustensiles
 
 ### Ajouts et changements principaux

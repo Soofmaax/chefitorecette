@@ -212,7 +212,7 @@ Les principaux **points d’attention avant production** :
 **Points positifs**
 
 - **Loading states** présents partout :
-  - `LoadingSpinner` en dashboard, listes, import CSV, knowledge, audio, recettes, alerts.
+  - `LoadingSpinner` en dashboard, listes, import CSV (calendrier éditorial, ingrédients, ustensiles, knowledge), audio, recettes, alerts.
 - **Errors user-friendly**
   - Messages textuels (rouge) pour les erreurs de chargement et d’action.
   - Détails affichés pour les erreurs d’import CSV ou de mutation.
