@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { articleSchema, ArticleFormValues } from "@/types/forms";
@@ -19,6 +19,8 @@ const NewArticlePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -34,6 +36,25 @@ const NewArticlePage = () => {
       publish_at: ""
     }
   });
+
+  const slugAutoRef = useRef<string | null>(null);
+  const watchedTitle = watch("title");
+  const watchedSlug = watch("slug");
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
 
   const onSubmit = async (values: ArticleFormValues) => {
     setMessage(null);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { recipeSchema, RecipeFormValues } from "@/types/forms";
@@ -20,6 +20,8 @@ const NewRecipePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
@@ -58,6 +60,25 @@ const NewRecipePage = () => {
       schema_jsonld_enabled: false
     }
   });
+
+  const slugAutoRef = useRef<string | null>(null);
+  const watchedTitle = watch("title");
+  const watchedSlug = watch("slug");
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
 
   const onSubmit = async (values: RecipeFormValues) => {
     setMessage(null);
@@ -286,13 +307,21 @@ const NewRecipePage = () => {
 
           <div>
             <label htmlFor="category">Catégorie</label>
-            <input
+            <select
               id="category"
-              type="text"
               className="mt-1 w-full"
-              placeholder="dessert, plat principal…"
               {...register("category")}
-            />
+            >
+              <option value="entree">Entrée</option>
+              <option value="plat_principal">Plat principal</option>
+              <option value="accompagnement">Accompagnement</option>
+              <option value="dessert">Dessert</option>
+              <option value="aperitif">Apéritif</option>
+              <option value="gateau">Gâteau</option>
+              <option value="boisson">Boisson</option>
+              <option value="sauce">Sauce</option>
+              <option value="test">Test</option>
+            </select>
             {errors.category && (
               <p className="form-error">{errors.category.message}</p>
             )}
@@ -432,6 +461,192 @@ const NewRecipePage = () => {
             />
             {errors.tags && (
               <p className="form-error">{errors.tags.message as string}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Bloc régimes / service / conservation */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label>Régimes / mentions</label>
+            <Controller
+              control={control}
+              name="dietary_labels"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2">
+                    <div className="grid gap-1 text-xs text-slate-200">
+                      {[
+                        { value: "vegetarien", label: "Végétarien" },
+                        { value: "vegetalien", label: "Végétalien" },
+                        { value: "vegan", label: "Végan" },
+                        { value: "pescetarien", label: "Pescetarien" },
+                        { value: "sans_gluten", label: "Sans gluten" },
+                        { value: "sans_lactose", label: "Sans lactose" },
+                        { value: "sans_oeuf", label: "Sans œuf" },
+                        { value: "sans_arachide", label: "Sans arachide" },
+                        {
+                          value: "sans_fruits_a_coque",
+                          label: "Sans fruits à coque"
+                        },
+                        { value: "sans_soja", label: "Sans soja" },
+                        {
+                          value: "sans_sucre_ajoute",
+                          label: "Sans sucre ajouté"
+                        },
+                        {
+                          value: "sans_sel_ajoute",
+                          label: "Sans sel ajouté"
+                        },
+                        { value: "halal", label: "Halal" },
+                        { value: "casher", label: "Casher" }
+                      ].map((option) => {
+                        const checked = current.includes(
+                          option.value as (typeof current)[number]
+                        );
+                        return (
+                          <label
+                            key={option.value}
+                            className="inline-flex items-center gap-2"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  field.onChange([...current, option.value]);
+                                } else {
+                                  field.onChange(
+                                    current.filter((v) => v !== option.value)
+                                  );
+                                }
+                              }}
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            {errors.dietary_labels && (
+              <p className="form-error">
+                {errors.dietary_labels.message as string}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label>Température de service</label>
+            <Controller
+              control={control}
+              name="serving_temperatures"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200">
+                    {[
+                      { value: "chaud", label: "Chaude" },
+                      { value: "tiede", label: "Tiède" },
+                      { value: "ambiante", label: "Température ambiante" },
+                      { value: "froid", label: "Froide" },
+                      { value: "au_choix", label: "Au choix" }
+                    ].map((option) => {
+                      const checked = current.includes(
+                        option.value as (typeof current)[number]
+                      );
+                      return (
+                        <label
+                          key={option.value}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                field.onChange([...current, option.value]);
+                              } else {
+                                field.onChange(
+                                  current.filter((v) => v !== option.value)
+                                );
+                              }
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            {errors.serving_temperatures && (
+              <p className="form-error">
+                {errors.serving_temperatures.message as string}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label>Modes de conservation</label>
+            <Controller
+              control={control}
+              name="storage_modes"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200">
+                    {[
+                      { value: "refrigerateur", label: "Réfrigérateur" },
+                      { value: "congelateur", label: "Congélateur" },
+                      { value: "ambiante", label: "Température ambiante" },
+                      { value: "sous_vide", label: "Sous vide" },
+                      {
+                        value: "boite_hermetique",
+                        label: "Boîte hermétique"
+                      },
+                      { value: "au_choix", label: "Au choix" }
+                    ].map((option) => {
+                      const checked = current.includes(
+                        option.value as (typeof current)[number]
+                      );
+                      return (
+                        <label
+                          key={option.value}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                field.onChange([...current, option.value]);
+                              } else {
+                                field.onChange(
+                                  current.filter((v) => v !== option.value)
+                                );
+                              }
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            {errors.storage_modes && (
+              <p className="form-error">
+                {errors.storage_modes.message as string}
+              </p>
             )}
           </div>
         </div>

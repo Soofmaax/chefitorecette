@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
@@ -25,6 +25,8 @@ const EditArticlePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -40,6 +42,25 @@ const EditArticlePage = () => {
       publish_at: ""
     }
   });
+
+  const slugAutoRef = useRef<string | null>(null);
+  const watchedTitle = watch("title");
+  const watchedSlug = watch("slug");
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
 
   useEffect(() => {
     const fetchArticle = async (articleId: string) => {
