@@ -129,6 +129,22 @@ const mapWorkStatus = (value: string): string | null => {
   return null;
 };
 
+const mapDifficultyLevel = (value: string): number | null => {
+  const v = value.toLowerCase();
+  if (!v) return null;
+
+  if (["1", "beginner", "debutant", "débutant"].includes(v)) {
+    return 1;
+  }
+  if (["2", "intermediate", "intermediaire", "intermédiaire"].includes(v)) {
+    return 2;
+  }
+  if (["3", "advanced", "avance", "avancé"].includes(v)) {
+    return 3;
+  }
+  return null;
+};
+
 const buildImportRows = (
   parsed: ParsedRow[],
   mapping: ColumnMapping
@@ -176,11 +192,13 @@ const buildImportRows = (
 
     let difficulty_level: number | null = null;
     if (difficultyRaw.trim()) {
-      const n = Number(difficultyRaw);
-      if (Number.isNaN(n) || n < 1 || n > 3) {
-        errors.push("Difficulté invalide (attendu 1, 2 ou 3)");
+      const mappedDifficulty = mapDifficultyLevel(difficultyRaw.trim());
+      if (mappedDifficulty === null) {
+        errors.push(
+          "Difficulté invalide (attendu 1, 2, 3 ou beginner/intermediate/advanced)"
+        );
       } else {
-        difficulty_level = n;
+        difficulty_level = mappedDifficulty;
       }
     }
 
