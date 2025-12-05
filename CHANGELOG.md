@@ -2,6 +2,61 @@
 
 Ce fichier liste les changements notables apportés au backoffice Chefito.
 
+## 0.3.0 – Alignement audit, UX RAG et ustensiles
+
+### Ajouts et changements principaux
+
+- **Backoffice centré RAG / usage interne**
+  - Le backoffice est explicitement positionné comme **outil interne pour préparer les données RAG** (et le front), avec en pratique **un admin unique**.
+  - La documentation (`readme.md`, `AUDIT_FINAL.md`) a été mise à jour pour refléter ce rôle.
+
+- **Factorisation de la qualité éditoriale & pre-publish**
+  - Nouveau module partagé `src/lib/recipesQuality.ts` :
+    - `getRecipeMissingFields(recipe)` : logique unique de complétude éditoriale/SEO.
+    - `computePrePublishIssues(values, options)` : liste les problèmes bloquants avant publication (statut `published`).
+  - Utilisé par :
+    - la liste `/admin/recipes` (`src/app/admin/recipes/page.tsx`) pour les badges de complétude,
+    - la page d’édition `/admin/recipes/[id]/edit` pour le blocage pre‑publish.
+  - L’audit (`AUDIT_FINAL.md`) a été mis à jour pour noter que la duplication a été corrigée.
+
+- **Prévisualisation recette côté admin**
+  - Nouvelle page `/admin/recipes/[id]/preview` (App Router) :
+    - Affiche un **iframe** vers la page publique `/recipes/[id]` (pages router).
+    - Permet de vérifier visuellement le rendu front sans quitter l’admin.
+  - Ajout d’un bouton “Prévisualiser la page publique” sur `/admin/recipes/[id]/edit`.
+
+- **Admin du catalogue d’ustensiles**
+  - Nouvelle page `/admin/utensils` :
+    - Liste les entrées de `utensils_catalog` (clé + label).
+    - Calcule un `usage_count` par ustensile à partir de `recipe_utensils`.
+    - Permet de créer / éditer / (sous conditions) supprimer un ustensile.
+    - Empêche la suppression si l’ustensile est utilisé par au moins une recette.
+  - Entrée “Ustensiles” ajoutée dans la sidebar admin.
+
+- **Filtres “techno” sur les recettes**
+  - Sur `/admin/recipes`, ajout de deux filtres supplémentaires :
+    - **Conservation / service** :
+      - `Conservation (toutes)` / `Avec conservation/service` / `Sans conservation/service`.
+      - Basé sur `serving_temperatures`, `storage_modes`, `storage_duration_days`, `storage_instructions`.
+    - **Ustensiles** :
+      - `Ustensiles (tous)` / `Avec ustensiles` / `Sans ustensiles`.
+      - Basé sur la présence d’entrées dans `recipe_utensils` (via une map `utensilsPresence`).
+  - Ces filtres complètent les badges 🌡 / 🔧 déjà affichés et facilitent le pilotage de l’enrichissement RAG.
+
+- **Dashboard RAG simplifié**
+  - Les dépendances aux anciennes fonctions Edge (Redis/S3/Vault) ont été retirées du dashboard pour éviter le bruit CORS et les erreurs lorsque ces services ne sont pas configurés.
+  - Le module `src/lib/dashboard.ts` ne repose plus que sur les tables (`recipes`, `posts`, `user_profiles`), et les pages dashboard affichent désormais des panneaux descriptifs pour les intégrations Redis/S3/Vault (sans métriques chiffrées).
+
+- **Documentation**
+  - `readme.md` :
+    - Clarifie que le backoffice est un outil interne pour enrichir les recettes et structurer les données pour le RAG.
+    - Documente les nouveaux filtres “techno”, la prévisualisation admin et la page `/admin/utensils`.
+  - `AUDIT_FINAL.md` :
+    - Marque la factorisation de `getRecipeMissingFields` comme réalisée.
+    - Ajoute une mention explicite sur l’usage “un seul admin” dans la pratique.
+  - `SECURITY.md` :
+    - Rappelle que la validation pre‑publish se base sur `computePrePublishIssues` défini dans `src/lib/recipesQuality.ts`.
+
 ## 0.2.0 – Calendrier éditorial, JSON-LD et durcissement sécurité
 
 ### Ajouts majeurs

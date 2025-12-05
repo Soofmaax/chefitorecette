@@ -11,6 +11,9 @@ Ce projet combine :
 - Un backoffice historique minimal (pages router) pour certaines opérations.
 - Un nouvel **espace admin recettes enrichies en App Router** sous `/admin/*` optimisé pour l’enrichissement de recettes.
 
+Le backoffice est conçu comme un **outil interne** dont la vocation principale est de **préparer et structurer les recettes pour un système RAG** (et pour le site public).  
+En pratique, il est pensé pour être utilisé par **un admin unique** ou un très petit nombre d’administrateurs.
+
 ---
 
 ## Sommaire

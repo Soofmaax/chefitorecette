@@ -4,31 +4,33 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ---
 
-## 1. Factoriser la logique de “recette complète”
+## 1. Factoriser la logique de “recette complète” ✅ **(implémenté)**
 
 - **Description**  
   Extraire `getRecipeMissingFields` et la logique associée (liste / edit) dans un module unique, par ex. `src/lib/recipesQuality.ts`.
-- **Effort estimé** : 30–45 min  
-- **Impact** : élevé (maintenabilité, cohérence métier)
-- **Détails** :
-  - Exporter une fonction `getRecipeMissingFields(recipe)` avec un type partagé.
-  - L’utiliser dans :
+- **Statut** : réalisé  
+  - Nouveau module `src/lib/recipesQuality.ts` avec :
+    - `getRecipeMissingFields(recipe)` pour la complétude éditoriale/SEO.
+    - `computePrePublishIssues(values, options)` pour la validation pre‑publish.
+  - Utilisé dans :
     - `src/app/admin/recipes/page.tsx`
     - `src/app/admin/recipes/[id]/edit/page.tsx`
-  - Mettre à jour la doc/README pour pointer vers ce module.
+  - Doc mise à jour (`readme.md`, `AUDIT_FINAL.md`).
+
+- **Impact** : élevé (maintenabilité, cohérence métier)
 
 ---
 
-## 2. Plus de bruit CORS sur le dashboard RAG
+## 2. Plus de bruit CORS sur le dashboard RAG ✅ **(implémenté)**
 
 - **Description**  
   Simplifier le dashboard pour ne plus dépendre des Edge Functions `redis-wrapper`, `s3-vectors-wrapper`, `vault-wrapper` tant qu'elles ne sont pas configurées dans Supabase.
-- **Effort estimé** : 15–20 min  
+- **Statut** : réalisé  
+  - `src/lib/dashboard.ts` ne fait plus appel à des fonctions Edge Redis/S3/Vault.
+  - Les pages dashboard s’appuient uniquement sur les tables (`recipes`, `posts`, `user_profiles`) et affichent des panneaux descriptifs pour les intégrations.
+  - Doc mise à jour (`CHANGELOG.md`, `readme.md`, `AUDIT_FINAL.md`) pour préciser que ces intégrations sont optionnelles.
+
 - **Impact** : moyen/élevé (console propre, onboarding plus simple)
-- **Détails** :
-  - Modifier `src/lib/dashboard.ts` pour ne plus appeler `supabase.functions.invoke` sur ces wrappers.
-  - Garder uniquement les stats qui dépendent des tables (`recipes`, `posts`, `user_profiles`).
-  - Mettre à jour la doc pour préciser que les intégrations Redis/S3/Vault sont optionnelles et non requises pour utiliser l'admin.
 
 ---
 

@@ -11,6 +11,9 @@ _Auteur :_ Cosine / Genie (audit automatisé basé sur le code du repo)
 
 Le backoffice Chefito est globalement **bien structuré, typé, sécurisé et cohérent** :
 
+- Il est conçu comme un **outil interne** dont l’objectif principal est de **préparer et enrichir les recettes pour un système RAG** (et, indirectement, pour le site public).
+- En pratique, il est prévu pour être **utilisé par un admin unique** (ou un très petit nombre d’admins), même si le modèle `user_profiles.role` permettrait d’introduire un rôle `editor` ultérieurement.
+
 - Architecture claire : séparation `app` (admin recettes enrichies) / `pages` (legacy), `lib`, `hooks`, `components`.
 - **TypeScript strict** (aucun `tsc` error), Zod utilisé sur tous les formulaires critiques.
 - **ESLint (next/core-web-vitals)** : 0 erreurs/avertissements.
@@ -70,10 +73,12 @@ Les principaux **points d’attention avant production** :
 
 **Points perfectibles**
 
-- **Duplication de logique de qualité éditoriale**
-- `getRecipeMissingFields` est défini à la fois dans `src/app/admin/recipes/page.tsx` et dans `src/app/admin/recipes/[id]/edit/page.tsx` (version légèrement différente).
-- Risque de divergence à moyen terme.
-- ✅ Recommandation : factoriser dans `src/lib/recipesQuality.ts` ou `src/lib/recipes.ts`.
+- **Duplication de logique de qualité éditoriale (corrigée)**  
+  - La logique de complétude (`getRecipeMissingFields`) était initialement dupliquée entre la liste et l’éditeur de recettes.  
+  - ✅ Elle a été **factorisée dans `src/lib/recipesQuality.ts`** et réutilisée par :
+    - `src/app/admin/recipes/page.tsx`
+    - `src/app/admin/recipes/[id]/edit/page.tsx`
+  - Le module expose également `computePrePublishIssues`, utilisé pour le blocage pre‑publish.
 - **TODOs**
   - Centralisés dans `TODO.md`, ce qui est bien.
   - Pas de `// TODO` dispersés dans le code → bonne discipline.
@@ -221,10 +226,11 @@ Les principaux **points d’attention avant production** :
 - **Responsive**
   - Layout basé sur Tailwind, classes `md:*` bien utilisées.
   - Tableaux scrollables, colonnes adaptatives.
+- **Prévisualisation front depuis l’admin**
+  - Une page dédiée `/admin/recipes/[id]/preview` permet désormais d’ouvrir un iframe vers `/recipes/[id]` pour vérifier rapidement le rendu public de la recette, directement depuis l’admin.
 
 **Améliorations possibles**
 
-- Ajouter un **preview recette** dans l’admin (`/admin/recipes/[id]/preview`) pour voir un rendu proche du front.
 - Ajouter des **notifications non-blockantes** (toasts) pour les succès/erreurs fréquentes, au lieu de simples paragraphes (améliore la visibilité).
 
 ---
@@ -233,12 +239,12 @@ Les principaux **points d’attention avant production** :
 
 **État actuel**
 
-- Pas de tests unitaires / d’intégration présents dans le repo (`__tests__`, Jest, Vitest…).
-- Pas de tests E2E (Playwright, Cypress).
-- Qualité assurée via :
+- Pas de tests unitaires / d’intégration présents dans ce repo (`__tests__`, Jest, Vitest…).  
+  → La qualité est aujourd’hui assurée principalement par :
   - TypeScript strict,
   - ESLint,
   - CI complète (lint, typecheck, build, npm audit, CodeQL).
+- En pratique, le backoffice est utilisé par **un admin unique** pour préparer les données RAG, ce qui réduit un peu le risque d’erreurs massives, mais ne remplace pas des tests automatisés.
 
 **Recommandations prioritaires**
 
