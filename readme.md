@@ -35,6 +35,7 @@ En pratique, il est pensé pour être utilisé par **un admin unique** ou un tr�
 - [7. Guide de prise en main en 5 minutes (par rôle)](#7-guide-de-prise-en-main-en-5-minutes-par-rôle)
 - [8. Installation & exécution locale](#8-installation--exécution-locale)
 - [9. Configuration Supabase & environnement](#9-configuration-supabase--environnement)
+- [10. Déploiement](#10-déploiement)
 
 ---
 

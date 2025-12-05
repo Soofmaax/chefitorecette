@@ -66,7 +66,8 @@ const AdminKnowledgePage = () => {
     isError
   } = useQuery<KnowledgeConcept[]>({
     queryKey: ["knowledge-base"],
-    queryFn: fetchKnowledge
+    queryFn: fetchKnowledge,
+    staleTime: 10 * 60 * 1000
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);

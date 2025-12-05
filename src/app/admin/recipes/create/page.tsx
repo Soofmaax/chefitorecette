@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { recipeSchema, RecipeFormValues } from "@/types/forms";
+import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
 import { TagInput } from "@/components/ui/TagInput";
@@ -238,6 +239,8 @@ const AdminCreateRecipePage = () => {
   const watchedMetaDescription = watch("meta_description");
   const watchedCanonicalUrl = watch("canonical_url");
   const watchedOgImageUrl = watch("og_image_url");
+  const watchedDifficulty = watch("difficulty");
+  const watchedDifficultyDetailed = watch("difficulty_detailed");
 
   useEffect(() => {
     if (watchedTitle && !isNonEmpty(watchedMetaTitle)) {
@@ -275,6 +278,17 @@ const AdminCreateRecipePage = () => {
       });
     }
   }, [watchedImageUrl, watchedOgImageUrl, setValue]);
+
+  useEffect(() => {
+    if (!watchedDifficulty) return;
+    if (isNonEmpty(watchedDifficultyDetailed)) return;
+    const template = difficultyTemplates[watchedDifficulty];
+    if (template) {
+      setValue("difficulty_detailed", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
 
   const onSubmit = async (values: RecipeFormValues) => {
     setMessage(null);

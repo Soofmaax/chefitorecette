@@ -15,6 +15,7 @@ import {
   getRecipeMissingFields,
   computePrePublishIssues
 } from "@/lib/recipesQuality";
+import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
 import { triggerEmbedding } from "@/lib/embeddings";
@@ -120,15 +121,6 @@ const fetchRecipeCuisines = async (): Promise<string[]> => {
 
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
-
-const difficultyTemplates: Record<string, string> = {
-  beginner:
-    "Recette accessible aux débutants, avec peu d'étapes techniques. Le principal enjeu est de respecter les temps et les températures de cuisson.",
-  intermediate:
-    "Recette de difficulté intermédiaire, qui nécessite une bonne maîtrise des bases (préparation, cuisson, organisation) et un minimum de rigueur.",
-  advanced:
-    "Recette exigeante, avec plusieurs étapes techniques et une gestion fine des textures, des temps de repos et des températures."
-};
 
 const DIETARY_LABEL_OPTIONS = [
   { value: "vegetarien", label: "Végétarien" },

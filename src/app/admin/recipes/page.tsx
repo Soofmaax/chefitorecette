@@ -348,6 +348,18 @@ const AdminRecipesPage = () => {
   const [page, setPage] = useState<number>(1);
   const perPage = 50;
 
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setDifficultyFilter("all");
+    setCategoryFilter("all");
+    setCuisineFilter("all");
+    setSearch("");
+    setSlugOrId("");
+    setRagFilter("all");
+    setConservationFilter("all");
+    setUtensilsFilter("all");
+  };
+
   // Reset page when filtres, recherche ou filtre RAG changent
   useEffect(() => {
     setPage(1);
@@ -397,12 +409,14 @@ const AdminRecipesPage = () => {
 
   const { data: categories = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-categories"],
-    queryFn: fetchCategories
+    queryFn: fetchCategories,
+    staleTime: 10 * 60 * 1000
   });
 
   const { data: cuisines = [] } = useQuery<string[], Error>({
     queryKey: ["admin-recipes-cuisines"],
-    queryFn: fetchCuisines
+    queryFn: fetchCuisines,
+    staleTime: 10 * 60 * 1000
   });
 
   const recipes = useMemo<AdminRecipe[]>(
@@ -542,7 +556,14 @@ const AdminRecipesPage = () => {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
+            >
+              Réinitialiser les filtres
+            </button>
             <select
               className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               value={statusFilter}
@@ -771,7 +792,7 @@ const AdminRecipesPage = () => {
                           : "—"}
                       </td>
                       <td className="px-4 py-2 align-top text-xs text-slate-200">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">ap-1">
                           {enriched && (
                             <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
                               ✅ complète

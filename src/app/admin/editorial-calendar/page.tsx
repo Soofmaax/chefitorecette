@@ -81,6 +81,15 @@ const AdminEditorialCalendarPage = () => {
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
+  const resetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setCategoryFilter("all");
+    setDifficultyFilter("all");
+    setMonthFilter("all");
+    setPriorityFilter("all");
+  };
+
   const {
     data: rows,
     isLoading,
@@ -549,6 +558,13 @@ const AdminEditorialCalendarPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-1 inline-flex items-center rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800 md:mt-0"
+          >
+            Réinitialiser les filtres
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">

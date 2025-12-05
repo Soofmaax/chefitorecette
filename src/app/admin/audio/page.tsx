@@ -63,7 +63,8 @@ const AdminAudioPage = () => {
     isError
   } = useQuery<AudioLibraryRow[]>({
     queryKey: ["audio-library"],
-    queryFn: fetchAudioLibrary
+    queryFn: fetchAudioLibrary,
+    staleTime: 10 * 60 * 1000
   });
 
   const {
@@ -72,7 +73,8 @@ const AdminAudioPage = () => {
     isError: mappingsError
   } = useQuery<AudioMappingRow[]>({
     queryKey: ["audio-mapping"],
-    queryFn: fetchAudioMappings
+    queryFn: fetchAudioMappings,
+    staleTime: 10 * 60 * 1000
   });
 
   const [file, setFile] = useState<File | null>(null);
