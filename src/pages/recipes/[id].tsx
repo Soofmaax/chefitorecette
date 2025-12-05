@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
@@ -7,6 +7,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { supabase } from "@/lib/supabaseClient";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
+import { difficultyTemplates, chefTipsTemplates } from "@/lib/recipesDifficulty";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -25,6 +26,8 @@ const EditRecipePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
@@ -63,6 +66,216 @@ const EditRecipePage = () => {
       schema_jsonld_enabled: false
     }
   });
+
+  const slugAutoRef = useRef<string | null>(null);
+  const watchedTitle = watch("title");
+  const watchedSlug = watch("slug");
+  const watchedDescription = watch("description");
+  const watchedIngredientsText = watch("ingredients_text");
+  const watchedImageUrl = watch("image_url");
+  const watchedDifficulty = watch("difficulty");
+  const watchedDifficultyDetailed = watch("difficulty_detailed");
+  const watchedChefTips = watch("chef_tips");
+  const watchedDietaryLabels = watch("dietary_labels");
+  const watchedNutritionalNotes = watch("nutritional_notes");
+  const watchedStorageModes = watch("storage_modes");
+  const watchedStorageDuration = watch("storage_duration_days");
+  const watchedStorageInstructions = watch("storage_instructions");
+  const watchedCuisine = watch("cuisine");
+  const watchedCulturalHistory = watch("cultural_history");
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
+
+  useEffect(() => {
+    const difficulty = watchedDifficulty;
+    const details = watchedDifficultyDetailed;
+    if (!difficulty) return;
+    if (details && details.trim() !== "") {
+      return;
+    }
+    const template = difficultyTemplates[difficulty];
+    if (template) {
+      setValue("difficulty_detailed", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
+
+  useEffect(() => {
+    const difficulty = watchedDifficulty;
+    const tips = watchedChefTips;
+    if (!difficulty) return;
+    if (tips && tips.trim() !== "") {
+      return;
+    }
+    const template = chefTipsTemplates[difficulty];
+    if (template) {
+      setValue("chef_tips", template, {
+        shouldDirty: true
+      });
+    }
+  }, [watchedDifficulty, watchedChefTips, setValue]);
+
+  useEffect(() => {
+    const labels: string[] = watchedDietaryLabels ?? [];
+    const notes = watchedNutritionalNotes;
+    if (!labels.length) return;
+    if (notes && notes.trim() !== "") return;
+
+    const parts: string[] = [];
+
+    if (labels.includes("vegan")) {
+      parts.push("Recette adaptée à un régime végan.");
+    } else if (labels.includes("vegetalien")) {
+      parts.push("Recette adaptée à un régime végétalien.");
+    } else if (labels.includes("vegetarien")) {
+      parts.push("Recette adaptée à un régime végétarien.");
+    } else if (labels.includes("pescetarien")) {
+      parts.push("Recette adaptée à un régime pescetarien (poisson autorisé).");
+    }
+
+    if (labels.includes("sans_gluten")) {
+      parts.push(
+        "Sans gluten, sous réserve de vérifier la composition des ingrédients utilisés (farine, sauces, etc.)."
+      );
+    }
+    if (labels.includes("sans_lactose")) {
+      parts.push(
+        "Sans lactose si des produits laitiers sans lactose ou des alternatives végétales sont utilisés."
+      );
+    }
+    if (labels.includes("sans_oeuf")) {
+      parts.push("Sans œuf, convient aux personnes allergiques aux œufs.");
+    }
+    if (labels.includes("sans_arachide") || labels.includes("sans_fruits_a_coque")) {
+      parts.push(
+        "Formulée pour limiter les risques liés aux arachides et/ou fruits à coque, vérifier toujours les étiquettes."
+      );
+    }
+    if (labels.includes("sans_sucre_ajoute")) {
+      parts.push("Sans sucre ajouté, la douceur provient uniquement des ingrédients de base.");
+    }
+    if (labels.includes("sans_sel_ajoute")) {
+      parts.push("Sans sel ajouté, l’assaisonnement peut être ajusté au service selon les besoins.");
+    }
+    if (labels.includes("halal")) {
+      parts.push("Compatible avec un régime halal, sous réserve du choix des ingrédients.");
+    }
+    if (labels.includes("casher")) {
+      parts.push("Compatible avec un régime casher, sous réserve du contrôle des produits utilisés.");
+    }
+
+    if (!parts.length) return;
+
+    const text = parts.join(" ");
+    setValue("nutritional_notes", text, {
+      shouldDirty: true
+    });
+  }, [watchedDietaryLabels, watchedNutritionalNotes, setValue]);
+
+  useEffect(() => {
+    const modes: string[] = watchedStorageModes ?? [];
+    const duration = watchedStorageDuration;
+    const existing = watchedStorageInstructions;
+
+    if (!modes.length && (typeof duration !== "number" || Number.isNaN(duration))) {
+      return;
+    }
+    if (existing && existing.trim() !== "") {
+      return;
+    }
+
+    const modePhrases: string[] = [];
+    if (modes.includes("refrigerateur")) {
+      modePhrases.push("au réfrigérateur");
+    }
+    if (modes.includes("congelateur")) {
+      modePhrases.push("au congélateur");
+    }
+    if (modes.includes("ambiante")) {
+      modePhrases.push("à température ambiante");
+    }
+    if (modes.includes("sous_vide")) {
+      modePhrases.push("sous vide");
+    }
+    if (modes.includes("boite_hermetique")) {
+      modePhrases.push("dans une boîte hermétique");
+    }
+    if (modes.includes("au_choix")) {
+      modePhrases.push("dans le mode de conservation de votre choix");
+    }
+
+    const durationText =
+      typeof duration === "number" && !Number.isNaN(duration)
+        ? `${duration} jour${duration > 1 ? "s" : ""}`
+        : "";
+
+    let sentence = "";
+
+    if (durationText) {
+      sentence = `Se conserve idéalement jusqu’à ${durationText}`;
+      if (modePhrases.length) {
+        sentence += ` ${modePhrases.join(" et ")}`;
+      }
+      sentence += ".";
+    } else if (modePhrases.length) {
+      sentence = `Se conserve de préférence ${modePhrases.join(" et ")}.`;
+    }
+
+    if (!sentence) return;
+
+    setValue("storage_instructions", sentence, {
+      shouldDirty: true
+    });
+  }, [
+    watchedStorageModes,
+    watchedStorageDuration,
+    watchedStorageInstructions,
+    setValue
+  ]);
+
+  useEffect(() => {
+    const cuisine = (watchedCuisine || "").trim();
+    const existing = watchedCulturalHistory;
+    if (!cuisine) return;
+    if (existing && existing.trim() !== "") return;
+
+    const lower = cuisine.toLowerCase();
+    let text = "";
+
+    if (lower.includes("fran")) {
+      text =
+        "Cette recette s’inscrit dans la tradition française, en mettant en avant des produits simples de saison et une cuisson maîtrisée.";
+    } else if (lower.includes("ital")) {
+      text =
+        "Cette recette s’inspire de la cuisine italienne, axée sur quelques bons ingrédients travaillés avec simplicité et générosité.";
+    } else if (lower.includes("jap")) {
+      text =
+        "Cette recette évoque l’esprit de la cuisine japonaise, avec une attention particulière portée à l’équilibre des saveurs et des textures.";
+    } else if (lower.includes("medit") || lower.includes("médit")) {
+      text =
+        "Cette recette rappelle la cuisine méditerranéenne, riche en légumes, en herbes fraîches et en matières grasses de qualité.";
+    } else {
+      text = `Cette recette s’inspire de la cuisine ${cuisine}, en reprenant ses codes et ses produits emblématiques.`;
+    }
+
+    setValue("cultural_history", text, {
+      shouldDirty: true
+    });
+  }, [watchedCuisine, watchedCulturalHistory, setValue]);
 
   useEffect(() => {
     const fetchRecipe = async (recipeId: string) => {
@@ -204,6 +417,19 @@ const EditRecipePage = () => {
         category: values.category,
         cuisine: values.cuisine,
         tags: values.tags,
+        dietary_labels:
+          values.dietary_labels && values.dietary_labels.length > 0
+            ? values.dietary_labels
+            : null,
+        serving_temperatures:
+          values.serving_temperatures &&
+          values.serving_temperatures.length > 0
+            ? values.serving_temperatures
+            : null,
+        storage_modes:
+          values.storage_modes && values.storage_modes.length > 0
+            ? values.storage_modes
+            : null,
         status: values.status,
         publish_at: publishAtIso,
         ingredients_text: values.ingredients_text,
@@ -294,11 +520,25 @@ const EditRecipePage = () => {
             système RAG et le site public.
           </p>
         </div>
-        <Link href="/recipes" legacyBehavior>
-          <a>
-            <Button variant="secondary">Retour à la liste</Button>
-          </a>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/recipes" legacyBehavior>
+            <a>
+              <Button variant="secondary">Retour à la liste</Button>
+            </a>
+          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={() => {
+              if (typeof id === "string") {
+                router.push(`/recipes/new?fromId=${id}`);
+              }
+            }}
+          >
+            Nouvelle recette à partir de celle-ci
+          </Button>
+        </div>
       </div>
 
       <form
@@ -338,13 +578,21 @@ const EditRecipePage = () => {
 
           <div>
             <label htmlFor="category">Catégorie</label>
-            <input
+            <select
               id="category"
-              type="text"
               className="mt-1 w-full"
-              placeholder="dessert, plat principal…"
               {...register("category")}
-            />
+            >
+              <option value="entree">Entrée</option>
+              <option value="plat_principal">Plat principal</option>
+              <option value="accompagnement">Accompagnement</option>
+              <option value="dessert">Dessert</option>
+              <option value="aperitif">Apéritif</option>
+              <option value="gateau">Gâteau</option>
+              <option value="boisson">Boisson</option>
+              <option value="sauce">Sauce</option>
+              <option value="test">Test</option>
+            </select>
             {errors.category && (
               <p className="form-error">{errors.category.message}</p>
             )}
@@ -484,6 +732,192 @@ const EditRecipePage = () => {
             />
             {errors.tags && (
               <p className="form-error">{errors.tags.message as string}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Bloc régimes / service / conservation */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label>Régimes / mentions</label>
+            <Controller
+              control={control}
+              name="dietary_labels"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2">
+                    <div className="grid gap-1 text-xs text-slate-200">
+                      {[
+                        { value: "vegetarien", label: "Végétarien" },
+                        { value: "vegetalien", label: "Végétalien" },
+                        { value: "vegan", label: "Végan" },
+                        { value: "pescetarien", label: "Pescetarien" },
+                        { value: "sans_gluten", label: "Sans gluten" },
+                        { value: "sans_lactose", label: "Sans lactose" },
+                        { value: "sans_oeuf", label: "Sans œuf" },
+                        { value: "sans_arachide", label: "Sans arachide" },
+                        {
+                          value: "sans_fruits_a_coque",
+                          label: "Sans fruits à coque"
+                        },
+                        { value: "sans_soja", label: "Sans soja" },
+                        {
+                          value: "sans_sucre_ajoute",
+                          label: "Sans sucre ajouté"
+                        },
+                        {
+                          value: "sans_sel_ajoute",
+                          label: "Sans sel ajouté"
+                        },
+                        { value: "halal", label: "Halal" },
+                        { value: "casher", label: "Casher" }
+                      ].map((option) => {
+                        const checked = current.includes(
+                          option.value as (typeof current)[number]
+                        );
+                        return (
+                          <label
+                            key={option.value}
+                            className="inline-flex items-center gap-2"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  field.onChange([...current, option.value]);
+                                } else {
+                                  field.onChange(
+                                    current.filter((v) => v !== option.value)
+                                  );
+                                }
+                              }}
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            {errors.dietary_labels && (
+              <p className="form-error">
+                {errors.dietary_labels.message as string}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label>Température de service</label>
+            <Controller
+              control={control}
+              name="serving_temperatures"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200">
+                    {[
+                      { value: "chaud", label: "Chaude" },
+                      { value: "tiede", label: "Tiède" },
+                      { value: "ambiante", label: "Température ambiante" },
+                      { value: "froid", label: "Froide" },
+                      { value: "au_choix", label: "Au choix" }
+                    ].map((option) => {
+                      const checked = current.includes(
+                        option.value as (typeof current)[number]
+                      );
+                      return (
+                        <label
+                          key={option.value}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                field.onChange([...current, option.value]);
+                              } else {
+                                field.onChange(
+                                  current.filter((v) => v !== option.value)
+                                );
+                              }
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            {errors.serving_temperatures && (
+              <p className="form-error">
+                {errors.serving_temperatures.message as string}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label>Modes de conservation</label>
+            <Controller
+              control={control}
+              name="storage_modes"
+              render={({ field }) => {
+                const current = field.value ?? [];
+                return (
+                  <div className="mt-1 space-y-1 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200">
+                    {[
+                      { value: "refrigerateur", label: "Réfrigérateur" },
+                      { value: "congelateur", label: "Congélateur" },
+                      { value: "ambiante", label: "Température ambiante" },
+                      { value: "sous_vide", label: "Sous vide" },
+                      {
+                        value: "boite_hermetique",
+                        label: "Boîte hermétique"
+                      },
+                      { value: "au_choix", label: "Au choix" }
+                    ].map((option) => {
+                      const checked = current.includes(
+                        option.value as (typeof current)[number]
+                      );
+                      return (
+                        <label
+                          key={option.value}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                field.onChange([...current, option.value]);
+                              } else {
+                                field.onChange(
+                                  current.filter((v) => v !== option.value)
+                                );
+                              }
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            {errors.storage_modes && (
+              <p className="form-error">
+                {errors.storage_modes.message as string}
+              </p>
             )}
           </div>
         </div>
@@ -628,7 +1062,24 @@ const EditRecipePage = () => {
         {/* Bloc SEO */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="meta_title">Titre SEO</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="meta_title">Titre SEO</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const title = (watchedTitle || "").trim();
+                  if (!title) return;
+                  const seoTitle = `Recette de ${title}`;
+                  setValue("meta_title", seoTitle, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis le titre
+              </button>
+            </div>
             <input
               id="meta_title"
               type="text"
@@ -639,7 +1090,47 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="meta_description">Description Meta</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="meta_description">Description Meta</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const desc = (watchedDescription || "").trim();
+                  const ingredientsLines = (watchedIngredientsText || "")
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                    .slice(0, 3);
+
+                  let base = desc;
+                  if (!base && ingredientsLines.length) {
+                    base = `Ingrédients principaux : ${ingredientsLines.join(
+                      ", "
+                    )}`;
+                  } else if (base && ingredientsLines.length) {
+                    base = `${base} Ingrédients principaux : ${ingredientsLines.join(
+                      ", "
+                    )}.`;
+                  }
+
+                  const trimmed = base.trim();
+                  if (!trimmed) return;
+
+                  const finalText =
+                    trimmed.length > 160
+                      ? `${trimmed.slice(0, 157).trimEnd()}…`
+                      : trimmed;
+
+                  setValue("meta_description", finalText, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis la description
+              </button>
+            </div>
             <textarea
               id="meta_description"
               rows={3}
@@ -650,7 +1141,27 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="canonical_url">URL canonique</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="canonical_url">URL canonique</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const slug = (watchedSlug || "").trim();
+                  if (!slug) return;
+                  const basePath = `/recettes/${slug}`;
+                  const canonical = process.env.NEXT_PUBLIC_SITE_URL
+                    ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}${basePath}`
+                    : basePath;
+                  setValue("canonical_url", canonical, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis le slug
+              </button>
+            </div>
             <input
               id="canonical_url"
               type="url"
@@ -664,7 +1175,23 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="og_image_url">Image Open Graph</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="og_image_url">Image Open Graph</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const url = (watchedImageUrl || "").trim();
+                  if (!url) return;
+                  setValue("og_image_url", url, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Copier l&apos;image principale
+              </button>
+            </div>
             <input
               id="og_image_url"
               type="url"

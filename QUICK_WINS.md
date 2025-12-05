@@ -129,17 +129,16 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 
 ---
 
-## 10. Documentation “Déploiement” rapide dans le README
+## 10. Documentation “Déploiement” rapide dans le README ✅ **(implémenté)**
 
 - **Description**  
   Ajouter une section courte “Déploiement” dans `readme.md` qui résume les étapes et renvoie à `PRODUCTION_CHECKLIST.md`.
-- **Effort estimé** : 15–20 min  
+- **Statut** : réalisé  
+  - `readme.md` contient maintenant :
+    - une section 10. “Déploiement” (résumé des étapes pour Vercel ou autre),
+    - un lien explicite vers `PRODUCTION_CHECKLIST.md`,
+    - un rappel sur la configuration Supabase minimale (`.env.example`, variables d’environnement).
 - **Impact** : moyen (onboarding & clarté)
-- **Détails** :
-  - Ajouter un paragraphe avec :
-    - `npm run build` / `npm run start`,
-    - lien vers `PRODUCTION_CHECKLIST.md`,
-    - rappel de la configuration Supabase minimale (`.env.example`).
 
 ---
 
@@ -152,7 +151,6 @@ Objectif : 10 améliorations rapides **(≤ 1h chacune)** avec un impact signifi
 5. StaleTime React Query sur données stables (Quick Win 3).  
 6. Liens de navigation croisés recette ↔ calendrier (Quick Win 7).  
 7. Toast d’erreur global minimal (Quick Win 8).  
-8. Améliorations RAG debug (Quick Win 9).  
-9. Section “Déploiement” dans le README (Quick Win 10).
+8. Améliorations RAG debug (Quick Win 9).
 
 Ces actions sont peu coûteuses et renforcent immédiatement la **cohérence métier**, la **productivité éditoriale** et la **prévisibilité** du système en vue d’une mise en production.

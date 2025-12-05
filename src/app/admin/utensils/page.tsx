@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
@@ -55,6 +56,7 @@ const fetchUtensils = async (): Promise<UtensilWithUsage[]> => {
 };
 
 const AdminUtensilsPage = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<UtensilWithUsage | null>(null);
   const [form, setForm] = useState<Utensil>({ key: "", label: "" });
@@ -181,7 +183,15 @@ const AdminUtensilsPage = () => {
             .
           </p>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={() => router.push("/admin/utensils/import")}
+          >
+            Import CSV
+          </Button>
           <Button type="button" variant="primary" onClick={startCreate}>
             Nouvel ustensile
           </Button>

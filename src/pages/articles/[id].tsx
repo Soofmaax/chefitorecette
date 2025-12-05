@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
@@ -25,6 +25,8 @@ const EditArticlePage = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -40,6 +42,41 @@ const EditArticlePage = () => {
       publish_at: ""
     }
   });
+
+  const slugAutoRef = useRef<string | null>(null);
+  const watchedTitle = watch("title");
+  const watchedSlug = watch("slug");
+  const watchedContentHtml = watch("content_html");
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
+
+  useEffect(() => {
+    if (!watchedTitle) return;
+
+    const autoSlug = generateSlug(watchedTitle);
+
+    if (!autoSlug) {
+      return;
+    }
+
+    if (!watchedSlug || watchedSlug === slugAutoRef.current) {
+      setValue("slug", autoSlug, { shouldValidate: true, shouldDirty: true });
+      slugAutoRef.current = autoSlug;
+    }
+  }, [watchedTitle, watchedSlug, setValue]);
 
   useEffect(() => {
     const fetchArticle = async (articleId: string) => {
@@ -262,13 +299,23 @@ const EditArticlePage = () => {
 
           <div>
             <label htmlFor="category">Catégorie</label>
-            <input
+            <select
               id="category"
-              type="text"
               className="mt-1 w-full"
-              placeholder="Catégorie éditoriale"
               {...register("category")}
-            />
+            >
+              <option value="">Choisir une catégorie…</option>
+              <option value="techniques">Techniques de cuisine</option>
+              <option value="culture">Culture & histoire culinaire</option>
+              <option value="nutrition">Nutrition</option>
+              <option value="organisation">Organisation & batch cooking</option>
+              <option value="materiel">Matériel & équipement</option>
+              <option value="conseils_chef">Conseils du chef</option>
+              <option value="pas_a_pas">Pas-à-pas / tutoriel</option>
+              <option value="inspirations">Inspirations & idées menus</option>
+              <option value="actualites">Actualités</option>
+              <option value="autre">Autre</option>
+            </select>
             {errors.category && (
               <p className="form-error">{errors.category.message}</p>
             )}
@@ -320,7 +367,24 @@ const EditArticlePage = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label htmlFor="excerpt">Extrait</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="excerpt">Extrait</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const text = extractTextFromHTML(watchedContentHtml || "");
+                  if (!text) return;
+                  const truncated = text.slice(0, 260);
+                  setValue("excerpt", truncated, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis le contenu
+              </button>
+            </div>
             <textarea
               id="excerpt"
               rows={3}
