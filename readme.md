@@ -195,13 +195,14 @@ Fonctionnalités :
     - de concepts scientifiques liés,
     - et de champs SEO (`meta_title`, `meta_description`).
   - Sert à piloter la complétude de la structure de données pour le futur RAG, indépendamment du statut publié.
-- Lien vers la fiche d’édition enrichie :
-Ces règles alignent le statut `published` sur la définition d’une recette complète (au sens Chefito).
-- D’**exploiter les embeddings** comme couche technique optionnelle (RAG/recherche) sans qu’ils bloquent la qualité éditoriale.
-- ✅ `complète` = tous les critères éditoriaux/SEO remplis.
-- En haut, regarder le panneau “Qualité éditoriale & actions rapides” :
-- Regarder à nouveau ce panneau :
-- Si tous les critères sont remplis, la recette passe en “recette complète”.
-- Recettes publiées mais encore “à enrichir” peuvent être complétées a posteriori.
-- La qualité éditoriale reste indépendante de l’IA (uniquement éditorial/SEO).
-Après cette configuration, le backoffice est prêt à être utilisé comme **outil interne de gestion de contenu enrichi et de structuration RAG**.
+- **Filtres supplémentaires “techno”** :
+  - Filtre *Conservation / service* : recettes avec ou sans informations de conservation/service (modes, températures, durée, consignes).
+  - Filtre *Ustensiles* : recettes avec ou sans ustensiles renseignés (via `recipe_utensils`).
+
+Actions depuis la liste :
+
+- Lien vers la **fiche d’édition enrichie** : `/admin/recipes/{id}/edit`.
+- Bouton **“Recalculer embedding”** pour relancer la génération de l’embedding RAG pour une recette donnée.
+- Accès indirect à la prévisualisation : depuis la fiche d’édition, un bouton **“Prévisualiser la page publique”** ouvre `/admin/recipes/{id}/preview` avec un iframe embarquant `/recipes/{id}` (rendu front).
+
+Le catalogue d’ustensiles utilisé pour les badges et les filtres (icône 🔧) se gère via la page `/admin/utensils`.
