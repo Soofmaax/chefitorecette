@@ -126,28 +126,7 @@ const EditRecipePage = () => {
         tags: (data.tags as string[]) ?? [],
         dietary_labels: safeDietary,
         serving_temperatures: safeServingTemps,
-        storage_modes: safeStorageModes,{
-        title: data.title ?? "",
-        slug: data.slug ?? "",
-        description: data.description ?? "",
-        image_url: data.image_url ?? "",
-        prep_time_min: data.prep_time_min ?? 0,
-        cook_time_min: data.cook_time_min ?? 0,
-        rest_time_min: data.rest_time_min ?? 0,
-        servings: data.servings ?? 1,
-        difficulty:
-          (data.difficulty as RecipeFormValues["difficulty"]) ?? "beginner",
-        category:
-          (data.category as RecipeFormValues["category"]) ?? "plat_principal",
-        cuisine: data.cuisine ?? "",
-        tags: (data.tags as string[]) ?? [],
-        dietary_labels: (data.dietary_labels as string[]) ?? [],
-        serving_temperatures:
-          (data.serving_temperatures as string[]) ??
-          (data.serving_temperature
-            ? [data.serving_temperature as string]
-            : []),
-        storage_modes: (data.storage_modes as string[]) ?? [],
+        storage_modes: safeStorageModes,
         status: (data.status as RecipeFormValues["status"]) ?? "draft",
         publish_at: data.publish_at
           ? new Date(data.publish_at).toISOString().slice(0, 16)
