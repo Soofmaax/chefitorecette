@@ -17,6 +17,7 @@ export type AuthUser = User & {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  error: string | null;
   signInWithEmail: (
     email: string,
     password: string
@@ -42,66 +43,138 @@ async function fetchUserWithRole(user: User): Promise<AuthUser> {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     const init = async () => {
       setLoading(true);
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
+      setError(null);
 
-      if (session?.user) {
-        const userWithRole = await fetchUserWithRole(session.user);
-        setUser(userWithRole);
-      } else {
-        setUser(null);
-      }
+      try {
+        const {
+          data: { session },
+          error: sessionError
+        } = await supabase.auth.getSession();
 
-      setLoading(false);
-    };
+        if (sessionError) {
+          // eslint-disable-next-line no-console
+          console.error("[Auth] Erreur lors de la récupération de la session", sessionError);
+          setError("Impossible de récupérer la session d'authentification.");
+          setUser(null);
+          return;
+        }
 
-    init();
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      async (_event: string, session: { user: User } | null) => {
         if (session?.user) {
           const userWithRole = await fetchUserWithRole(session.user);
           setUser(userWithRole);
         } else {
           setUser(null);
         }
+      } catch (err) {
+        // Ce bloc intercepte notamment l'erreur "Supabase client non configuré"
+        // lorsque les variables d'environnement ne sont pas définies.
+        // eslint-disable-next-line no-console
+        console.error("[Auth] Erreur d'initialisation de la session", err);
+        setError(
+          "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)."
+        );
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    );
+    };
+
+    init();
+
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (_event: string, session: { user: User } | null) => {
+          try {
+            if (session?.user) {
+              const userWithRole = await fetchUserWithRole(session.user);
+              setUser(userWithRole);
+            } else {
+              setUser(null);
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error("[Auth] Erreur lors de la mise à jour de la session", err);
+            setError(
+              "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase."
+            );
+            setUser(null);
+          }
+        }
+      );
+
+      subscription = data.subscription;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[Auth] Erreur lors de l'inscription aux changements d'état d'authentification",
+        err
+      );
+      setError(
+        "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase."
+      );
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
-    const result = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    setError(null);
 
-    if (!result.error && result.data.user) {
-      const userWithRole = await fetchUserWithRole(result.data.user);
-      setUser(userWithRole);
+    try {
+      const result = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (!result.error && result.data.user) {
+        const userWithRole = await fetchUserWithRole(result.data.user);
+        setUser(userWithRole);
+      }
+
+      return result;
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error("[Auth] Erreur lors de la tentative de connexion", err);
+      setError(
+        "Erreur de configuration de l'authentification. Impossible de se connecter. Contactez un administrateur."
+      );
+
+      const error =
+        err instanceof Error ? err : new Error(String(err ?? "Unknown error"));
+
+      return { data: null, error };
     }
-
-    return result;
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    setError(null);
+
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[Auth] Erreur lors de la déconnexion", err);
+      setError("Erreur lors de la déconnexion.");
+    } finally {
+      setUser(null);
+    }
   };
 
   const value: AuthContextValue = {
     user,
     loading,
+    error,
     signInWithEmail,
     signOut
   };

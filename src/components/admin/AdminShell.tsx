@@ -13,7 +13,7 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({
   children
 }) => {
   const { sidebarOpen, toggleSidebar, closeSidebar } = useUIStore();
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading, error } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -27,6 +27,24 @@ export const AdminShell: React.FC<{ children: React.ReactNode }> = ({
           <span className="text-sm text-slate-400">
             Chargement de la session…
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+        <div className="card max-w-md px-6 py-6 text-center">
+          <h1 className="mb-2 text-lg font-semibold tracking-tight text-slate-100">
+            Problème de configuration
+          </h1>
+          <p className="mb-3 text-sm text-slate-400">
+            Une erreur empêche le chargement de la session d&apos;administration.
+            Vérifiez la configuration Supabase de l&apos;application
+            (variables d&apos;environnement sur Vercel).
+          </p>
+          <p className="text-xs text-slate-500 break-words">{error}</p>
         </div>
       </div>
     );
