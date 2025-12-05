@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { triggerEmbedding } from "@/lib/embeddings";
+import { getRecipeMissingFields } from "@/lib/recipesQuality";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
@@ -100,59 +101,6 @@ interface CuisineRow {
 
 const isNonEmpty = (value: string | null | undefined) =>
   typeof value === "string" && value.trim() !== "";
-
-const getRecipeMissingFields = (recipe: AdminRecipe): string[] => {
-  const missing: string[] = [];
-
-  if (recipe.status !== "published") {
-    missing.push("Statut publié");
-  }
-
-  if (!isNonEmpty(recipe.image_url)) {
-    missing.push("Image");
-  }
-
-  if (!isNonEmpty(recipe.description)) {
-    missing.push("Description");
-  }
-
-  if (!isNonEmpty(recipe.ingredients_text)) {
-    missing.push("Ingrédients");
-  }
-
-  if (!isNonEmpty(recipe.instructions_detailed)) {
-    missing.push("Instructions détaillées");
-  }
-
-  if (!isNonEmpty(recipe.cultural_history)) {
-    missing.push("Histoire / contexte culturel");
-  }
-
-  if (!isNonEmpty(recipe.techniques)) {
-    missing.push("Techniques");
-  }
-
-  if (!isNonEmpty(recipe.nutritional_notes)) {
-    missing.push("Notes nutritionnelles");
-  }
-
-  if (!isNonEmpty(recipe.meta_title)) {
-    missing.push("Titre SEO");
-  }
-
-  if (!isNonEmpty(recipe.meta_description)) {
-    missing.push("Description SEO");
-  }
-
-  if (
-    !isNonEmpty(recipe.chef_tips) &&
-    !isNonEmpty(recipe.difficulty_detailed)
-  ) {
-    missing.push("Astuces ou détails difficulté");
-  }
-
-  return missing;
-};
 
 const isCompleteRecipe = (recipe: AdminRecipe): boolean => {
   return getRecipeMissingFields(recipe).length === 0;

@@ -4,9 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { recipeSchema, RecipeFormValues } from "@/types/forms";
+import { uploadRecipeImage } from "@/lib/storage";
+import { generateSlug } from "@/lib/slug";
+import {
+  recipeSchema,
+  RecipeFormValues
+} from "@/types/forms";
+import {
+  getRecipeMissingFields,
+  computePrePublishIssues
+} from "@/lib/recipesQuality";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
 import { triggerEmbedding } from "@/lib/embeddings";
@@ -508,62 +516,6 @@ const AdminEditRecipePage = () => {
   const [prePublishIssues, setPrePublishIssues] = useState<string[]>([]);
   const [showPrePublishModal, setShowPrePublishModal] = useState(false);
 
-  const computePrePublishIssues = (
-    values: RecipeFormValues,
-    hasImage: boolean
-  ): string[] => {
-    const issues: string[] = [];
-
-    if (!hasImage) {
-      issues.push("Image principale manquante.");
-    }
-    if (!isNonEmpty(values.description)) {
-      issues.push("Description éditoriale manquante.");
-    }
-    if (!isNonEmpty(values.ingredients_text)) {
-      issues.push("Texte des ingrédients manquant.");
-    }
-    if (!isNonEmpty(values.instructions_detailed)) {
-      issues.push("Instructions détaillées manquantes.");
-    }
-    if (!isNonEmpty(values.cultural_history)) {
-      issues.push("Histoire / contexte culturel manquant.");
-    }
-    if (!isNonEmpty(values.techniques)) {
-      issues.push("Techniques mises en avant manquantes.");
-    }
-    if (!isNonEmpty(values.nutritional_notes)) {
-      issues.push("Notes nutritionnelles manquantes.");
-    }
-    if (!isNonEmpty(values.meta_title)) {
-      issues.push("Titre SEO manquant.");
-    }
-    if (!isNonEmpty(values.meta_description)) {
-      issues.push("Description SEO manquante.");
-    }
-    if (!isNonEmpty(values.chef_tips) && !isNonEmpty(values.difficulty_detailed)) {
-      issues.push("Astuces Chefito ou détails de difficulté manquants.");
-    }
-
-    if (ingredientsCount < 3) {
-      issues.push(
-        "Moins de 3 ingrédients normalisés dans recipe_ingredients_normalized."
-      );
-    }
-    if (stepsCount < 3) {
-      issues.push(
-        "Moins de 3 étapes enrichies dans recipe_steps_enhanced."
-      );
-    }
-    if ((recipeConcepts?.length ?? 0) < 1) {
-      issues.push(
-        "Aucun concept scientifique lié via recipe_concepts."
-      );
-    }
-
-    return issues;
-  };
-
   const onSubmit = async (values: RecipeFormValues) => {
     if (!id) return;
 
@@ -578,7 +530,14 @@ const AdminEditRecipePage = () => {
       (recipe && isNonEmpty(recipe.image_url));
 
     if (values.status === "published") {
-      const issues = computePrePublishIssues(values, hasImageCandidate);
+      const issues = computePrePublishIssues(values, {
+        normalizedIngredientsCount: ingredientsCount,
+        enrichedStepsCount: stepsCount,
+        conceptsCount: recipeConcepts?.length ?? 0
+      });
+      if (!hasImageCandidate) {
+        issues.unshift("Image principale manquante.");
+      }
       if (issues.length > 0) {
         setPrePublishIssues(issues);
         setShowPrePublishModal(true);
