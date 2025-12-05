@@ -66,6 +66,10 @@ interface RagCounts {
   concepts: number;
 }
 
+interface UtensilRow {
+  recipe_id: string;
+}
+
 interface RagInfo {
   status: RagStatus;
   hasIngredients: boolean;
@@ -353,6 +357,31 @@ const computeRagStatus = (
   return { status, hasIngredients, hasSteps, hasConcepts };
 };
 
+const fetchUtensilsPresence = async (
+  recipeIds: string[]
+): Promise<Record<string, boolean>> => {
+  if (recipeIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("recipe_utensils")
+    .select("recipe_id")
+    .in("recipe_id", recipeIds);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as UtensilRow[] | null) ?? [];
+  const map: Record<string, boolean> = {};
+  rows.forEach((row) => {
+    map[row.recipe_id] = true;
+  });
+
+  return map;
+};
+
 const AdminRecipesPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
@@ -437,9 +466,24 @@ const AdminRecipesPage = () => {
     placeholderData: keepPreviousData
   });
 
+  const { data: utensilsPresenceData } = useQuery<
+    Record<string, boolean>,
+    Error
+  >({
+    queryKey: ["admin-recipes-utensils", recipeIds],
+    queryFn: () => fetchUtensilsPresence(recipeIds),
+    enabled: recipeIds.length > 0,
+    placeholderData: keepPreviousData
+  });
+
   const ragCounts = useMemo<Record<string, RagCounts>>(
     () => ragCountsData ?? {},
     [ragCountsData]
+  );
+
+  const utensilsPresence = useMemo<Record<string, boolean>>(
+    () => utensilsPresenceData ?? {},
+    [utensilsPresenceData]
   );
 
   const recipesWithRag = useMemo<RecipeWithRagInfo[]>(
@@ -667,6 +711,19 @@ const AdminRecipesPage = () => {
                       ? "RAG partiel"
                       : "RAG absent";
 
+                  const hasServingTemps =
+                    Array.isArray(recipe.serving_temperatures) &&
+                    recipe.serving_temperatures.length > 0;
+                  const hasStorageModes =
+                    Array.isArray(recipe.storage_modes) &&
+                    recipe.storage_modes.length > 0;
+                  const hasStorageHints =
+                    typeof recipe.storage_duration_days === "number" ||
+                    isNonEmpty(recipe.storage_instructions);
+                  const hasConservation =
+                    hasServingTemps || hasStorageModes || hasStorageHints;
+                  const hasUtensils = utensilsPresence[recipe.id] ?? false;
+
                   return (
                     <tr key={recipe.id}>
                       <td className="px-4 py-2 align-top">
@@ -721,6 +778,16 @@ const AdminRecipesPage = () => {
                           {missing.length > 0 && (
                             <span className="rounded bg-red-500/10 px-2 py-0.5 text-[11px] text-red-200">
                               {missing.length} champ(s) manquant(s)
+                            </span>
+                          )}
+                          {hasConservation && (
+                            <span className="rounded bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-300">
+                              🌡 conservation / service
+                            </span>
+                          )}
+                          {hasUtensils && (
+                            <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-[11px] text-indigo-300">
+                              🔧 ustensiles
                             </span>
                           )}
                           <span className="rounded bg-slate-700/40 px-2 py-0.5 text-[11px] text-slate-300">
