@@ -13,10 +13,12 @@ const SignInPage = () => {
   const { user, signInWithEmail } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(true);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
@@ -27,6 +29,15 @@ const SignInPage = () => {
   });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedEmail = window.localStorage.getItem("chefito_admin_email");
+    if (savedEmail) {
+      setValue("email", savedEmail);
+      setRememberEmail(true);
+    }
+  }, [setValue]);
+
+  useEffect(() => {
     if (user) {
       router.replace("/dashboard");
     }
@@ -34,6 +45,15 @@ const SignInPage = () => {
 
   const onSubmit = async (values: SignInFormValues) => {
     setErrorMessage(null);
+
+    if (typeof window !== "undefined") {
+      if (rememberEmail) {
+        window.localStorage.setItem("chefito_admin_email", values.email);
+      } else {
+        window.localStorage.removeItem("chefito_admin_email");
+      }
+    }
+
     const { error } = await signInWithEmail(values.email, values.password);
     if (error) {
       // Message volontairement générique pour ne pas donner d'indication
@@ -90,6 +110,17 @@ const SignInPage = () => {
             {errors.password && (
               <p className="form-error">{errors.password.message}</p>
             )}
+            <div className="mt-2 flex items-center justify-between">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-400">
+                <input
+                  type="checkbox"
+                  className="h-3 w-3 rounded border-slate-600 bg-slate-900"
+                  checked={rememberEmail}
+                  onChange={(e) => setRememberEmail(e.target.checked)}
+                />
+                <span>Se souvenir de mon email sur cet appareil</span>
+              </label>
+            </div>
           </div>
 
           {errorMessage && (

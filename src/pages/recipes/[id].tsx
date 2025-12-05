@@ -69,6 +69,9 @@ const EditRecipePage = () => {
   const slugAutoRef = useRef<string | null>(null);
   const watchedTitle = watch("title");
   const watchedSlug = watch("slug");
+  const watchedDescription = watch("description");
+  const watchedIngredientsText = watch("ingredients_text");
+  const watchedImageUrl = watch("image_url");
 
   useEffect(() => {
     if (!watchedTitle) return;
@@ -856,7 +859,24 @@ const EditRecipePage = () => {
         {/* Bloc SEO */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="meta_title">Titre SEO</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="meta_title">Titre SEO</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const title = (watchedTitle || "").trim();
+                  if (!title) return;
+                  const seoTitle = `Recette de ${title}`;
+                  setValue("meta_title", seoTitle, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis le titre
+              </button>
+            </div>
             <input
               id="meta_title"
               type="text"
@@ -867,7 +887,47 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="meta_description">Description Meta</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="meta_description">Description Meta</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const desc = (watchedDescription || "").trim();
+                  const ingredientsLines = (watchedIngredientsText || "")
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                    .slice(0, 3);
+
+                  let base = desc;
+                  if (!base && ingredientsLines.length) {
+                    base = `Ingrédients principaux : ${ingredientsLines.join(
+                      ", "
+                    )}`;
+                  } else if (base && ingredientsLines.length) {
+                    base = `${base} Ingrédients principaux : ${ingredientsLines.join(
+                      ", "
+                    )}.`;
+                  }
+
+                  const trimmed = base.trim();
+                  if (!trimmed) return;
+
+                  const finalText =
+                    trimmed.length > 160
+                      ? `${trimmed.slice(0, 157).trimEnd()}…`
+                      : trimmed;
+
+                  setValue("meta_description", finalText, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis la description
+              </button>
+            </div>
             <textarea
               id="meta_description"
               rows={3}
@@ -878,7 +938,27 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="canonical_url">URL canonique</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="canonical_url">URL canonique</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const slug = (watchedSlug || "").trim();
+                  if (!slug) return;
+                  const basePath = `/recettes/${slug}`;
+                  const canonical = process.env.NEXT_PUBLIC_SITE_URL
+                    ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}${basePath}`
+                    : basePath;
+                  setValue("canonical_url", canonical, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Générer depuis le slug
+              </button>
+            </div>
             <input
               id="canonical_url"
               type="url"
@@ -892,7 +972,23 @@ const EditRecipePage = () => {
           </div>
 
           <div>
-            <label htmlFor="og_image_url">Image Open Graph</label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="og_image_url">Image Open Graph</label>
+              <button
+                type="button"
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  const url = (watchedImageUrl || "").trim();
+                  if (!url) return;
+                  setValue("og_image_url", url, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }}
+              >
+                Copier l&apos;image principale
+              </button>
+            </div>
             <input
               id="og_image_url"
               type="url"
