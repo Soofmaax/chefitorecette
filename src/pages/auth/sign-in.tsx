@@ -44,7 +44,7 @@ const SignInPage = () => {
     }
   }, [user, router]);
 
-  const onSubmit = (values: SignInFormValues) => {
+  const onSubmit = async (values: SignInFormValues) => {
     setErrorMessage(null);
 
     if (typeof window !== "undefined") {
@@ -55,48 +55,26 @@ const SignInPage = () => {
       }
     }
 
-    const timeoutMs = 15000;
     setAuthSubmitting(true);
 
-    Promise.race([
-      signInWithEmail(values.email, values.password),
-      new Promise<{ data: null; error: Error }>((resolve) =>
-        setTimeout(
-          () =>
-            resolve({
-              data: null,
-              error: new Error("signIn timeout")
-            }),
-          timeoutMs
-        )
-      )
-    ])
-      .then((result) => {
-        if (result.error) {
-          // Message volontairement générique pour ne pas donner d'indication
-          // sur l'existence du compte ou la nature de l'erreur.
-          const isTimeoutError =
-            result.error instanceof Error &&
-            result.error.message === "signIn timeout";
+    try {
+      const { error } = await signInWithEmail(values.email, values.password);
 
-          setErrorMessage(
-            isTimeoutError
-              ? "La connexion est trop lente. Merci de réessayer."
-              : "Identifiants invalides. Merci de réessayer."
-          );
-          return;
-        }
+      if (error) {
+        // Message volontairement générique pour ne pas donner d'indication
+        // sur l'existence du compte ou la nature de l'erreur.
+        setErrorMessage("Identifiants invalides. Merci de réessayer.");
+        return;
+      }
 
-        router.replace("/dashboard");
-      })
-      .catch(() => {
-        setErrorMessage(
-          "Une erreur est survenue pendant la connexion. Merci de réessayer."
-        );
-      })
-      .finally(() => {
-        setAuthSubmitting(false);
-      });
+      router.replace("/dashboard");
+    } catch {
+      setErrorMessage(
+        "Une erreur est survenue pendant la connexion. Merci de réessayer."
+      );
+    } finally {
+      setAuthSubmitting(false);
+    }
   };
 
   return (
