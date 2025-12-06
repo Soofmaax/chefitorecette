@@ -73,7 +73,7 @@ const SignInPage = () => {
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace("/admin/dashboard");
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("[SignIn] onSubmit error", err);
