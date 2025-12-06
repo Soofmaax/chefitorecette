@@ -1,4 +1,4 @@
-import {
+                                                                                                                        import {
   createContext,
   useContext,
   useEffect,
@@ -111,7 +111,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (err) {
             // eslint-disable-next-line no-console
-            console.error("[Auth] Erreur lors de la mise à jour de la session", err);
+            console.error(
+              "[Auth] Erreur lors de la mise à jour de la session",
+              err
+            );
             setError(
               "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase."
             );
@@ -151,13 +154,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail start", { email });
 
-      const {
-        data,
-        error
-      } = await supabase.auth.signInWithPassword({
+      const timeoutMs = 5000;
+
+      type SignInResponse = Awaited<
+        ReturnType<typeof supabase.auth.signInWithPassword>
+      >;
+
+      type TimeoutResult = {
+        data: null;
+        error: Error;
+        __timeout: true;
+      };
+
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       });
+
+      const result = (await Promise.race<SignInResponse | TimeoutResult>([
+        signInPromise,
+        new Promise<TimeoutResult>((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: null,
+                error: new Error(
+                  "Timeout lors de la tentative de connexion à Supabase."
+                ),
+                __timeout: true
+              }),
+            timeoutMs
+          )
+        )
+      ])) as SignInResponse | TimeoutResult;
+
+      if ("__timeout" in result && result.__timeout) {
+        // eslint-disable-next-line no-console
+        console.error("[Auth] signInWithEmail timeout");
+        setLoading(false);
+        return { data: null, error: result.error };
+      }
+
+      const { data, error } = result as SignInResponse;
 
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail result", { data, error });
@@ -174,7 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setLoading(false);
       return { data, error: null };
-    } catch (err: any) {
+    } catch (err: unknown) {
       // eslint-disable-next-line no-console
       console.error("[Auth] Erreur lors de la tentative de connexion", err);
       setError(
