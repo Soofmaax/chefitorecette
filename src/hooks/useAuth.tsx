@@ -53,10 +53,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
 
       try {
+        const timeoutMs = 2000;
+
+        type GetSessionResponse = Awaited<
+          ReturnType<typeof supabase.auth.getSession>
+        >;
+
+        type SessionTimeoutResult = {
+          data: { session: null };
+          error: null;
+          __timeout: true;
+        };
+
+        const getSessionPromise = supabase.auth.getSession();
+
+        const result = (await Promise.race<
+          GetSessionResponse | SessionTimeoutResult
+        >([
+          getSessionPromise,
+          new Promise<SessionTimeoutResult>((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  data: { session: null },
+                  error: null,
+                  __timeout: true
+                }),
+              timeoutMs
+            )
+          )
+        ])) as GetSessionResponse | SessionTimeoutResult;
+
+        if ("__timeout" in result && result.__timeout) {
+          // Timeout : on considère qu'il n'y a pas de session valide,
+          // sans remonter d'erreur pour ne pas effrayer inutilement.
+          setUser(null);
+          setError(null);
+          return;
+        }
+
         const {
           data: { session },
           error: sessionError
-        } = await supabase.auth.getSession();
+        } = result as GetSessionResponse;
 
         if (sessionError) {
           // eslint-disable-next-line no-console
@@ -154,48 +193,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail start", { email });
 
-      const timeoutMs = 5000;
-
-      type SignInResponse = Awaited<
-        ReturnType<typeof supabase.auth.signInWithPassword>
-      >;
-
-      type TimeoutResult = {
-        data: null;
-        error: Error;
-        __timeout: true;
-      };
-
-      const signInPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-
-      const result = (await Promise.race<SignInResponse | TimeoutResult>([
-        signInPromise,
-        new Promise<TimeoutResult>((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                data: null,
-                error: new Error(
-                  "Timeout lors de la tentative de connexion à Supabase."
-                ),
-                __timeout: true
-              }),
-            timeoutMs
-          )
-        )
-      ])) as SignInResponse | TimeoutResult;
-
-      if ("__timeout" in result && result.__timeout) {
-        // eslint-disable-next-line no-console
-        console.error("[Auth] signInWithEmail timeout");
-        setLoading(false);
-        return { data: null, error: result.error };
-      }
-
-      const { data, error } = result as SignInResponse;
 
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail result", { data, error });
