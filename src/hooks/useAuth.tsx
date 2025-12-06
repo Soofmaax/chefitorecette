@@ -156,14 +156,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const timeoutMs = 5000;
 
+      type SignInResponse = Awaited<
+        ReturnType<typeof supabase.auth.signInWithPassword>
+      >;
+
+      type TimeoutResult = {
+        data: null;
+        error: Error;
+        __timeout: true;
+      };
+
       const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      const timedResult: any = await Promise.race([
+      const result = (await Promise.race<SignInResponse | TimeoutResult>([
         signInPromise,
-        new Promise((resolve) =>
+        new Promise<TimeoutResult>((resolve) =>
           setTimeout(
             () =>
               resolve({
@@ -176,17 +186,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             timeoutMs
           )
         )
-      ]);
+      ])) as SignInResponse | TimeoutResult;
 
-      if (timedResult.__timeout) {
+      if ("__timeout" in result && result.__timeout) {
         // eslint-disable-next-line no-console
         console.error("[Auth] signInWithEmail timeout");
         setLoading(false);
-        const error = timedResult.error as Error;
-        return { data: null, error };
+        return { data: null, error: result.error };
       }
 
-      const { data, error } = timedResult;
+      const { data, error } = result as SignInResponse;
 
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail result", { data, error });
@@ -203,7 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setLoading(false);
       return { data, error: null };
-    } catch (err: any) {
+    } catch (err: unknown) {
       // eslint-disable-next-line no-console
       console.error("[Auth] Erreur lors de la tentative de connexion", err);
       setError(
