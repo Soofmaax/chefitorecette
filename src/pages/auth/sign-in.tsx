@@ -5,12 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInSchema, SignInFormValues } from "@/types/forms";
 import { useAuth } from "@/hooks/useAuth";
+import { signInWithEmail as supabaseSignInWithEmail } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 const SignInPage = () => {
   const router = useRouter();
-  const { user, signInWithEmail } = useAuth();
+  const { user } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberEmail, setRememberEmail] = useState(true);
@@ -61,7 +62,10 @@ const SignInPage = () => {
       // eslint-disable-next-line no-console
       console.log("[SignIn] onSubmit start", { email: values.email });
 
-      const { error } = await signInWithEmail(values.email, values.password);
+      const { error } = await supabaseSignInWithEmail(
+        values.email,
+        values.password
+      );
 
       // eslint-disable-next-line no-console
       console.log("[SignIn] signInWithEmail resolved", { error });
