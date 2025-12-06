@@ -40,7 +40,7 @@ const SignInPage = () => {
 
   useEffect(() => {
     if (user) {
-      router.replace("/dashboard");
+      router.replace("/admin/dashboard");
     }
   }, [user, router]);
 
