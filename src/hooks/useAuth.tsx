@@ -52,40 +52,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
 
-      const timeoutMs = 2000;
-
       try {
-        const getSessionPromise = supabase.auth.getSession();
-
-        // On impose un délai maximum pour éviter de rester bloqué
-        // indéfiniment sur le chargement si la session Supabase
-        // est lente ou bloquée.
-        const timedResult: any = await Promise.race([
-          getSessionPromise,
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve({
-                  data: { session: null },
-                  error: null,
-                  __timeout: true
-                }),
-              timeoutMs
-            )
-          )
-        ]);
-
-        if (timedResult.__timeout) {
-          // Timeout : on considère qu'il n'y a pas de session valide.
-          setUser(null);
-          setError(null);
-          return;
-        }
-
         const {
           data: { session },
           error: sessionError
-        } = timedResult;
+        } = await supabase.auth.getSession();
 
         if (sessionError) {
           // eslint-disable-next-line no-console
@@ -140,7 +111,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (err) {
             // eslint-disable-next-line no-console
-            console.error("[Auth] Erreur lors de la mise à jour de la session", err);
+            console.error(
+              "[Auth] Erreur lors de la mise à jour de la session",
+              err
+            );
             setError(
               "Erreur de configuration de l'authentification. Vérifiez les variables d'environnement Supabase."
             );
