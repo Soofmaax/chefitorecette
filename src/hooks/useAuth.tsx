@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = async (email: string, password: string) =&gt; {
     setError(null);
     setLoading(true);
 
@@ -154,13 +154,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail start", { email });
 
-      const {
-        data,
-        error
-      } = await supabase.auth.signInWithPassword({
+      const timeoutMs = 5000;
+
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password
       });
+
+      const timedResult: any = await Promise.race([
+        signInPromise,
+        new Promise((resolve) =>
+          setTimeout(
+            () =>
+              resolve({
+                data: null,
+                error: new Error(
+                  "Timeout lors de la tentative de connexion à Supabase."
+                ),
+                __timeout: true
+              }),
+            timeoutMs
+          )
+        )
+      ]);
+
+      if (timedResult.__timeout) {
+        // eslint-disable-next-line no-console
+        console.error("[Auth] signInWithEmail timeout");
+        setLoading(false);
+        const error = timedResult.error as Error;
+        return { data: null, error };
+      }
+
+      const { data, error } = timedResult;
 
       // eslint-disable-next-line no-console
       console.log("[Auth] signInWithEmail result", { data, error });
