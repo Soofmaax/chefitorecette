@@ -53,10 +53,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
 
       try {
+        const timeoutMs = 2000;
+
+        type GetSessionResponse = Awaited<
+          ReturnType<typeof supabase.auth.getSession>
+        >;
+
+        type SessionTimeoutResult = {
+          data: { session: null };
+          error: null;
+          __timeout: true;
+        };
+
+        const getSessionPromise = supabase.auth.getSession();
+
+        const result = (await Promise.race<
+          GetSessionResponse | SessionTimeoutResult
+        >([
+          getSessionPromise,
+          new Promise<SessionTimeoutResult>((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  data: { session: null },
+                  error: null,
+                  __timeout: true
+                }),
+              timeoutMs
+            )
+          )
+        ])) as GetSessionResponse | SessionTimeoutResult;
+
+        if ("__timeout" in result && result.__timeout) {
+          // Timeout : on considère qu'il n'y a pas de session valide,
+          // sans remonter d'erreur pour ne pas effrayer inutilement.
+          setUser(null);
+          setError(null);
+          return;
+        }
+
         const {
           data: { session },
           error: sessionError
-        } = await supabase.auth.getSession();
+        } = result as GetSessionResponse;
 
         if (sessionError) {
           // eslint-disable-next-line no-console
