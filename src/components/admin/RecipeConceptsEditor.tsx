@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, {
+  useMemo,
+  useState,
+  useImperativeHandle
+} from "react";
 import {
   useMutation,
   useQuery,
@@ -25,6 +29,10 @@ interface RecipeConceptLink {
 
 interface RecipeConceptsEditorProps {
   recipeId: string;
+}
+
+export interface RecipeConceptsEditorHandle {
+  autoLinkFromText: () => void;
 }
 
 const fetchAllConcepts = async (): Promise<KnowledgeConcept[]> => {
@@ -56,9 +64,10 @@ const fetchRecipeConcepts = async (
   return (data as RecipeConceptLink[]) ?? [];
 };
 
-export const RecipeConceptsEditor: React.FC<RecipeConceptsEditorProps> = ({
-  recipeId
-}) => {
+export const RecipeConceptsEditor = React.forwardRef<
+  RecipeConceptsEditorHandle,
+  RecipeConceptsEditorProps
+>(({ recipeId }, ref) => {
   const queryClient = useQueryClient();
   const { data: allConcepts, isLoading: isLoadingConcepts } = useQuery<
     KnowledgeConcept[]
@@ -280,6 +289,10 @@ export const RecipeConceptsEditor: React.FC<RecipeConceptsEditorProps> = ({
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    autoLinkFromText: handleAutoLinkConcepts
+  }));
+
   if (isError) {
     return (
       <p className="text-xs text-red-300">
@@ -408,4 +421,4 @@ export const RecipeConceptsEditor: React.FC<RecipeConceptsEditorProps> = ({
       </div>
     </div>
   );
-};
+});

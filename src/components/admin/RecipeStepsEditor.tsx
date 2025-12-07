@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState,
+  useImperativeHandle
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { parseInstructionsToSteps } from "@/lib/recipeImport";
@@ -21,6 +25,10 @@ interface DbStep {
 
 interface RecipeStepsEditorProps {
   recipeId: string;
+}
+
+export interface RecipeStepsEditorHandle {
+  prefillFromRecipeText: () => void;
 }
 
 const fetchSteps = async (recipeId: string): Promise<StepData[]> => {
@@ -59,9 +67,10 @@ const fetchSteps = async (recipeId: string): Promise<StepData[]> => {
   }));
 };
 
-export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
-  recipeId
-}) => {
+export const RecipeStepsEditor = React.forwardRef<
+  RecipeStepsEditorHandle,
+  RecipeStepsEditorProps
+>(({ recipeId }, ref) => {
   const queryClient = useQueryClient();
   const {
     data: steps,
@@ -235,6 +244,10 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    prefillFromRecipeText
+  }));
+
   if (isError) {
     return (
       <p className="text-xs text-red-300">
@@ -320,4 +333,4 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
       )}
     </div>
   );
-};
+});

@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useImperativeHandle
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { parseIngredientsTextToStructured } from "@/lib/recipeImport";
@@ -25,6 +30,10 @@ interface NormalizedIngredientRow {
 
 interface RecipeIngredientsEditorProps {
   recipeId: string;
+}
+
+export interface RecipeIngredientsEditorHandle {
+  prefillFromIngredientsText: () => void;
 }
 
 const COMMON_UNITS: string[] = [
@@ -95,9 +104,11 @@ const fetchNormalizedIngredients = async (
   });
 };
 
-export const RecipeIngredientsEditor: React.FC<
+export const RecipeIngredientsEditor = React.forwardRef<
+  RecipeIngredientsEditorHandle,
   RecipeIngredientsEditorProps
-> = ({ recipeId }) => {
+>(({ recipeId }, ref) _code=>new </{
+=> {
   const queryClient = useQueryClient();
   const {
     data: rows,
@@ -320,6 +331,10 @@ export const RecipeIngredientsEditor: React.FC<
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    prefillFromIngredientsText
+  }));
+
   if (isError) {
     return (
       <p className="text-xs text-red-300">
@@ -523,4 +538,4 @@ export const RecipeIngredientsEditor: React.FC<
       </div>
     </div>
   );
-};
+});

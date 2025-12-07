@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,9 +23,18 @@ import { buildRecipeJsonLd, validateRecipeJsonLd } from "@/lib/seo";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEditor";
-import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
-import { RecipeConceptsEditor } from "@/components/admin/RecipeConceptsEditor";
+import {
+  RecipeIngredientsEditor,
+  type RecipeIngredientsEditorHandle
+} from "@/components/admin/RecipeIngredientsEditor";
+import {
+  RecipeStepsEditor,
+  type RecipeStepsEditorHandle
+} from "@/components/admin/RecipeStepsEditor";
+import {
+  RecipeConceptsEditor,
+  type RecipeConceptsEditorHandle
+} from "@/components/admin/RecipeConceptsEditor";
 import { parseRecipeFromRawText } from "@/lib/recipeImport";
 
 const RECIPE_CATEGORY_OPTIONS = [
@@ -145,6 +154,12 @@ const AdminEditRecipePage = () => {
   const router = useRouter();
   const id = params?.id as string | undefined;
   const { showToast } = useToast();
+
+  const ingredientsEditorRef = useRef<RecipeIngredientsEditorHandle | null>(
+    null
+  );
+  const stepsEditorRef = useRef<RecipeStepsEditorHandle | null>(null);
+  const conceptsEditorRef = useRef<RecipeConceptsEditorHandle | null>(null);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -620,6 +635,21 @@ const AdminEditRecipePage = () => {
 
     setImportMessage(
       "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."
+    );
+  };
+
+  const handleBulkStructurePrefill = () => {
+    if (!id) return;
+    setImportMessage(null);
+
+    // Ces actions utilisent les textes déjà présents dans la recette
+    // (ingredients_text, instructions_detailed, etc.)
+    ingredientsEditorRef.current?.prefillFromIngredientsText();
+    stepsEditorRef.current?.prefillFromRecipeText();
+    conceptsEditorRef.current?.autoLinkFromText();
+
+    setImportMessage(
+      "Pré-remplissage lancé pour les ingrédients normalisés, les étapes enrichies et les concepts. Vérifie les sections en bas de page avant d'enregistrer."
     );
   };
 
@@ -1205,6 +1235,15 @@ const AdminEditRecipePage = () => {
               onClick={handleImportFromText}
             >
               Pré-remplir depuis le texte
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+              onClick={handleBulkStructurePrefill}
+              disabled={!id}
+            >
+              Pré-remplir ingrédients / étapes / concepts
             </Button>
             {importMessage && (
               <p className="text-emerald-300">{importMessage}</p>
@@ -1933,21 +1972,21 @@ const AdminEditRecipePage = () => {
       {/* Onglet 5 : Ingrédients structurés */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeIngredientsEditor recipeId={id} />
+          <RecipeIngredientsEditor recipeId={id} ref={ingredientsEditorRef} />
         </section>
       )}
 
       {/* Onglet 6 : Étapes enrichies */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeStepsEditor recipeId={id} />
+          <RecipeStepsEditor recipeId={id} ref={stepsEditorRef} />
         </section>
       )}
 
       {/* Onglet 7 : Concepts scientifiques */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeConceptsEditor recipeId={id} />
+          <RecipeConceptsEditor recipeId={id} ref={conceptsEditorRef} />
         </section>
       )}
     </div>
