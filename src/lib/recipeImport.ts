@@ -14,6 +14,10 @@ export interface ParsedRecipeFromText {
   storageInstructions?: string;
   tags?: string[];
   utensils?: string[];
+  chefTips?: string;
+  culturalHistory?: string;
+  techniques?: string;
+  nutritionalNotes?: string;
 }
 
 export interface ParsedStepFromText {
@@ -263,6 +267,61 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     }
   }
 
+  // --- Histoire / anecdote -> culturalHistory
+  let culturalHistory: string | undefined;
+  const idxAnecdote = lines.findIndex((l) =>
+    /anecdote/i.test(stripIconPrefix(l))
+  );
+  if (idxAnecdote !== -1) {
+    let endIdx = lines.length;
+    for (let i = idxAnecdote + 1; i < lines.length; i += 1) {
+      const s = stripIconPrefix(lines[i]).toLowerCase();
+      if (/tag trello/.test(s)) {
+        endIdx = i;
+        break;
+      }
+    }
+    const histLines = lines
+      .slice(idxAnecdote + 1, endIdx)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+
+    const petiteLines: string[] = [];
+    if (idxPetite !== -1) {
+      const end = idxIngr !== -1 ? idxIngr : lines.length;
+      petiteLines.push(
+        ...lines
+          .slice(idxPetite + 1, end)
+          .map((l) => stripIconPrefix(l))
+          .filter((l) => l.length > 0)
+      );
+    }
+
+    const allHist = [...petiteLines, ...histLines];
+    if (allHist.length > 0) {
+      culturalHistory = allHist.join(" ");
+    }
+  } else if (idxPetite !== -1) {
+    const end = idxIngr !== -1 ? idxIngr : lines.length;
+    const petiteLines = lines
+      .slice(idxPetite + 1, end)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+    if (petiteLines.length > 0) {
+      culturalHistory = petiteLines.join(" ");
+    }
+  }
+
+  // --- Astuces / options -> chefTips
+  const tipsLines: string[] = [];
+  lines.forEach((l) => {
+    const s = stripIconPrefix(l);
+    if (/^option\b/i.test(s) || /astuce/i.test(s) || /astuces/i.test(s)) {
+      tipsLines.push(s);
+    }
+  });
+  const chefTips = tipsLines.length > 0 ? tipsLines.join(" ") : undefined;
+
   // --- Tags simples (ex. "Tag Trello : ...")
   const tags: string[] = [];
   lines.forEach((l) => {
@@ -326,7 +385,11 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     storageDurationDays,
     storageInstructions,
     tags: tags.length > 0 ? Array.from(new Set(tags)) : undefined,
-    utensils: utensils.length > 0 ? Array.from(new Set(utensils)) : undefined
+    utensils: utensils.length > 0 ? Array.from(new Set(utensils)) : undefined,
+    chefTips,
+    culturalHistory,
+    techniques: undefined,
+    nutritionalNotes: undefined
   };
 };
 

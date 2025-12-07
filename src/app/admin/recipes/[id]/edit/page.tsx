@@ -554,6 +554,22 @@ const AdminEditRecipePage = () => {
     if (parsed.tags && parsed.tags.length > 0) {
       setValue("tags", parsed.tags, { shouldDirty: true });
     }
+    if (parsed.chefTips) {
+      setValue("chef_tips", parsed.chefTips, { shouldDirty: true });
+    }
+    if (parsed.culturalHistory) {
+      setValue("cultural_history", parsed.culturalHistory, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.techniques) {
+      setValue("techniques", parsed.techniques, { shouldDirty: true });
+    }
+    if (parsed.nutritionalNotes) {
+      setValue("nutritional_notes", parsed.nutritionalNotes, {
+        shouldDirty: true
+      });
+    }
 
     if (parsed.utensils && parsed.utensils.length > 0 && utensilsCatalog.length > 0) {
       const lowerCatalog = utensilsCatalog.map((u) => ({
