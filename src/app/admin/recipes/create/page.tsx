@@ -130,7 +130,7 @@ const AdminCreateRecipePage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [rawImportText, setRawImportText] = useState("");
   const [importMessage, setImportMessage] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(nu_codellnew)</;
+  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     control,
