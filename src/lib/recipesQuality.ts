@@ -74,41 +74,37 @@ export const getRecipeMissingFields = (recipe: RecipeLike): string[] => {
 
 /**
  * Liste les problèmes bloquants avant passage au statut `published`.
- * On se base sur RecipeFormValues pour ajouter des contraintes RAG.
+ *
+ * Pour simplifier le flux d'édition centré sur le texte, on se limite
+ * aux champs vraiment essentiels pour qu'une recette soit publiable.
+ * Les éléments avancés RAG (ingrédients normalisés, étapes enrichies,
+ * concepts scientifiques, SEO détaillé) deviennent optionnels.
  */
 export const computePrePublishIssues = (
   values: RecipeFormValues,
-  options: {
+  _options: {
     normalizedIngredientsCount: number;
     enrichedStepsCount: number;
     conceptsCount: number;
   }
 ): string[] => {
   const issues: string[] = [];
-  const missing = getRecipeMissingFields(values);
 
-  if (missing.length > 0) {
-    issues.push(
-      `Champs éditoriaux/SEO manquants : ${missing.join(", ")}.`
-    );
+  // Ces champs sont déjà validés par le schema zod, mais on garde
+  // une vérification défensive au cas où.
+  if (!isNonEmpty(values.description)) {
+    issues.push("Description obligatoire avant publication.");
+  }
+  if (!isNonEmpty(values.ingredients_text)) {
+    issues.push("Ingrédients obligatoires avant publication.");
+  }
+  if (!isNonEmpty(values.instructions_detailed)) {
+    issues.push("Instructions détaillées obligatoires avant publication.");
   }
 
+  // On peut conserver l'exigence d'une image pour la qualité visuelle.
   if (!values.image_url) {
     issues.push("Image obligatoire avant publication.");
-  }
-
-  if (options.normalizedIngredientsCount < 3) {
-    issues.push("Au moins 3 ingrédients normalisés sont requis.");
-  }
-
-  if (options.enrichedStepsCount < 3) {
-    issues.push("Au moins 3 étapes enrichies sont requises.");
-  }
-
-  if (options.conceptsCount < 1) {
-    issues.push(
-      "Au moins 1 concept scientifique lié est requis (base de connaissances)."
-    );
   }
 
   return issues;

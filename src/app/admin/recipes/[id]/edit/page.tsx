@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,9 +23,19 @@ import { buildRecipeJsonLd, validateRecipeJsonLd } from "@/lib/seo";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { RecipeIngredientsEditor } from "@/components/admin/RecipeIngredientsEditor";
-import { RecipeStepsEditor } from "@/components/admin/RecipeStepsEditor";
-import { RecipeConceptsEditor } from "@/components/admin/RecipeConceptsEditor";
+import {
+  RecipeIngredientsEditor,
+  type RecipeIngredientsEditorHandle
+} from "@/components/admin/RecipeIngredientsEditor";
+import {
+  RecipeStepsEditor,
+  type RecipeStepsEditorHandle
+} from "@/components/admin/RecipeStepsEditor";
+import {
+  RecipeConceptsEditor,
+  type RecipeConceptsEditorHandle
+} from "@/components/admin/RecipeConceptsEditor";
+import { parseRecipeFromRawText } from "@/lib/recipeImport";
 
 const RECIPE_CATEGORY_OPTIONS = [
   { value: "entree", label: "Entrée" },
@@ -145,9 +155,18 @@ const AdminEditRecipePage = () => {
   const id = params?.id as string | undefined;
   const { showToast } = useToast();
 
+  const ingredientsEditorRef = useRef<RecipeIngredientsEditorHandle | null>(
+    null
+  );
+  const stepsEditorRef = useRef<RecipeStepsEditorHandle | null>(null);
+  const conceptsEditorRef = useRef<RecipeConceptsEditorHandle | null>(null);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rawImportText, setRawImportText] = useState("");
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     control,
@@ -473,6 +492,166 @@ const AdminEditRecipePage = () => {
     watchedDifficultyDetailed,
     setValue
   ]);
+
+  const handleImportFromText = () => {
+    setImportMessage(null);
+    setImportError(null);
+
+    const trimmed = rawImportText.trim();
+    if (!trimmed) {
+      setImportError(
+        "Collez d'abord le texte complet de la recette dans la zone d'import."
+      );
+      return;
+    }
+
+    const parsed = parseRecipeFromRawText(trimmed);
+
+    if (
+      !parsed.title &&
+      !parsed.description &&
+      !parsed.ingredientsText &&
+      !parsed.instructionsText
+    ) {
+      setImportError(
+        "Impossible d'analyser ce texte. Vérifiez qu'il contient bien des sections Ingrédients / Préparation."
+      );
+      return;
+    }
+
+    if (parsed.title) {
+      setValue("title", parsed.title, { shouldDirty: true });
+    }
+    if (parsed.description) {
+      setValue("description", parsed.description, { shouldDirty: true });
+    }
+    if (typeof parsed.servings === "number" && !Number.isNaN(parsed.servings)) {
+      setValue("servings", parsed.servings, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.prepTimeMin === "number" &&
+      !Number.isNaN(parsed.prepTimeMin)
+    ) {
+      setValue("prep_time_min", parsed.prepTimeMin, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.cookTimeMin === "number" &&
+      !Number.isNaN(parsed.cookTimeMin)
+    ) {
+      setValue("cook_time_min", parsed.cookTimeMin, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.restTimeMin === "number" &&
+      !Number.isNaN(parsed.restTimeMin)
+    ) {
+      setValue("rest_time_min", parsed.restTimeMin, { shouldDirty: true });
+    }
+    if (parsed.ingredientsText) {
+      setValue("ingredients_text", parsed.ingredientsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.instructionsText) {
+      setValue("instructions_detailed", parsed.instructionsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.difficulty) {
+      setValue("difficulty", parsed.difficulty, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.storageDurationDays === "number" &&
+      !Number.isNaN(parsed.storageDurationDays)
+    ) {
+      setValue("storage_duration_days", parsed.storageDurationDays, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageInstructions) {
+      setValue("storage_instructions", parsed.storageInstructions, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      setValue("tags", parsed.tags, { shouldDirty: true });
+    }
+    if (parsed.chefTips) {
+      setValue("chef_tips", parsed.chefTips, { shouldDirty: true });
+    }
+    if (parsed.culturalHistory) {
+      setValue("cultural_history", parsed.culturalHistory, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.techniques) {
+      setValue("techniques", parsed.techniques, { shouldDirty: true });
+    }
+    if (parsed.nutritionalNotes) {
+      setValue("nutritional_notes", parsed.nutritionalNotes, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.dietaryLabels && parsed.dietaryLabels.length > 0) {
+      setValue("dietary_labels", parsed.dietaryLabels, {
+        shouldDirty: true
+      });
+    }
+    if (
+      parsed.servingTemperatures &&
+      parsed.servingTemperatures.length > 0
+    ) {
+      setValue("serving_temperatures", parsed.servingTemperatures, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageModes && parsed.storageModes.length > 0) {
+      setValue("storage_modes", parsed.storageModes, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.sourceInfo) {
+      setValue("source_info", parsed.sourceInfo, { shouldDirty: true });
+    }
+
+    if (parsed.utensils && parsed.utensils.length > 0 && utensilsCatalog.length > 0) {
+      const lowerCatalog = utensilsCatalog.map((u) => ({
+        key: u.key,
+        label: u.label,
+        lcLabel: u.label.toLowerCase()
+      }));
+      const nextKeys = new Set(selectedUtensils);
+      parsed.utensils.forEach((name) => {
+        const lcName = name.toLowerCase();
+        const match = lowerCatalog.find(
+          (u) =>
+            u.lcLabel.includes(lcName) || lcName.includes(u.lcLabel)
+        );
+        if (match) {
+          nextKeys.add(match.key);
+        }
+      });
+      setSelectedUtensils(Array.from(nextKeys));
+    }
+
+    setImportMessage(
+      "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."
+    );
+  };
+
+  const handleBulkStructurePrefill = () => {
+    if (!id) return;
+    setImportMessage(null);
+
+    // Ces actions utilisent les textes déjà présents dans la recette
+    // (ingredients_text, instructions_detailed, etc.)
+    ingredientsEditorRef.current?.prefillFromIngredientsText();
+    stepsEditorRef.current?.prefillFromRecipeText();
+    conceptsEditorRef.current?.autoLinkFromText();
+
+    setImportMessage(
+      "Pré-remplissage lancé pour les ingrédients normalisés, les étapes enrichies et les concepts. Vérifie les sections en bas de page avant d'enregistrer."
+    );
+  };
 
   const [prePublishIssues, setPrePublishIssues] = useState<string[]>([]);
   const [showPrePublishModal, setShowPrePublishModal] = useState(false);
@@ -1032,6 +1211,48 @@ const AdminEditRecipePage = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="card space-y-6 px-5 py-5"
       >
+        {/* Import texte brut pour pré-remplir le formulaire */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            0. Import depuis un texte brut
+          </h2>
+          <p className="text-xs text-slate-500">
+            Colle ici le texte complet de la recette, puis clique sur
+            &quot;Pré-remplir depuis le texte&quot;. Les champs principaux
+            (titre, temps, portions, ingrédients texte, instructions) seront remplis automatiquement.
+          </p>
+          <textarea
+            rows={8}
+            className="mt-2 w-full font-mono text-xs"
+            placeholder="Colle ici la recette brute (copiée depuis ton doc, Trello, etc.)…"
+            value={rawImportText}
+            onChange={(e) => setRawImportText(e.target.value)}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+              onClick={handleImportFromText}
+            >
+              Pré-remplir depuis le texte
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+              onClick={handleBulkStructurePrefill}
+              disabled={!id}
+            >
+              Pré-remplir ingrédients / étapes / concepts
+            </Button>
+            {importMessage && (
+              <p className="text-emerald-300">{importMessage}</p>
+            )}
+            {importError && <p className="text-red-300">{importError}</p>}
+          </div>
+        </section>
+
         {/* Onglet 1 : Infos de base */}
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
@@ -1414,8 +1635,7 @@ const AdminEditRecipePage = () => {
             3. Ustensiles / matériel
           </h2>
           <p className="text-xs text-slate-500">
-            Sélectionne les ustensiles et équipements importants nécessaires pour
-            réaliser la recette (four, airfryer, Thermomix, etc.).
+            Coche les ustensiles utilisés pour cette recette (facultatif).
           </p>
           <div className="flex flex-wrap gap-3 text-xs">
             {utensilsCatalog.length === 0 ? (
@@ -1597,9 +1817,8 @@ const AdminEditRecipePage = () => {
                 }}
               />
               <p className="mt-1 text-xs text-slate-500">
-                Vous pouvez fournir une URL ou uploader un fichier. En cas
-                d&apos;upload, le fichier est stocké dans Supabase Storage
-                (taille max 5 Mo).
+                Tu peux soit coller une URL d&apos;image, soit uploader un fichier
+                (stocké dans Supabase Storage).
               </p>
             </div>
 
@@ -1663,9 +1882,8 @@ const AdminEditRecipePage = () => {
             5. SEO avancé – Schema.org Recipe (JSON-LD)
           </h2>
           <p className="text-xs text-slate-500">
-            Le JSON-LD ci-dessous est généré automatiquement à partir des champs
-            de la recette. Il pourra être injecté côté front pour améliorer la
-            compréhension de la recette par les moteurs de recherche.
+            Zone avancée (optionnelle) : le JSON-LD est généré automatiquement
+            à partir des champs de la recette et peut être activé pour le site public.
           </p>
 
           <div className="flex items-center gap-2">
@@ -1752,21 +1970,21 @@ const AdminEditRecipePage = () => {
       {/* Onglet 5 : Ingrédients structurés */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeIngredientsEditor recipeId={id} />
+          <RecipeIngredientsEditor recipeId={id} ref={ingredientsEditorRef} />
         </section>
       )}
 
       {/* Onglet 6 : Étapes enrichies */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeStepsEditor recipeId={id} />
+          <RecipeStepsEditor recipeId={id} ref={stepsEditorRef} />
         </section>
       )}
 
       {/* Onglet 7 : Concepts scientifiques */}
       {id && (
         <section className="card mt-4 space-y-4 px-5 py-5">
-          <RecipeConceptsEditor recipeId={id} />
+          <RecipeConceptsEditor recipeId={id} ref={conceptsEditorRef} />
         </section>
       )}
     </div>

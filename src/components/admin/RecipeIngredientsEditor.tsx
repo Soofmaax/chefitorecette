@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useImperativeHandle
+} from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { parseIngredientsTextToStructured } from "@/lib/recipeImport";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import {
@@ -24,6 +30,10 @@ interface NormalizedIngredientRow {
 
 interface RecipeIngredientsEditorProps {
   recipeId: string;
+}
+
+export interface RecipeIngredientsEditorHandle {
+  prefillFromIngredientsText: () => void;
 }
 
 const COMMON_UNITS: string[] = [
@@ -94,9 +104,10 @@ const fetchNormalizedIngredients = async (
   });
 };
 
-export const RecipeIngredientsEditor: React.FC<
+export const RecipeIngredientsEditor = React.forwardRef<
+  RecipeIngredientsEditorHandle,
   RecipeIngredientsEditorProps
-> = ({ recipeId }) => {
+>(({ recipeId }, ref) => {
   const queryClient = useQueryClient();
   const {
     data: rows,
@@ -109,6 +120,7 @@ export const RecipeIngredientsEditor: React.FC<
 
   const [localRows, setLocalRows] = useState<NormalizedIngredientRow[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
 
   useEffect(() => {
     if (rows) {
@@ -235,6 +247,93 @@ export const RecipeIngredientsEditor: React.FC<
     setDraggedIndex(null);
   };
 
+  const prefillFromIngredientsText = async () => {
+    setPrefillError(null);
+
+    try {
+      const { data: recipeRow, error } = await supabase
+        .from("recipes")
+        .select("ingredients_text")
+        .eq("id", recipeId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const ingredientsText =
+        (recipeRow as { ingredients_text: string | null }).ingredients_text;
+
+      if (!ingredientsText || ingredientsText.trim() === "") {
+        setPrefillError(
+          "Aucun texte d'ingrédients n'est défini pour cette recette."
+        );
+        return;
+      }
+
+      const parsedLines = parseIngredientsTextToStructured(ingredientsText);
+
+      if (parsedLines.length === 0) {
+        setPrefillError(
+          "Impossible de trouver des lignes d'ingrédients dans le texte."
+        );
+        return;
+      }
+
+      const nextRows: NormalizedIngredientRow[] = [];
+      let orderIndex = 1;
+
+      // Pour chaque ligne parsée, on essaie de trouver un ingrédient dans le catalogue
+      // en se basant sur le nom détecté. En cas d'absence ou d'ambiguïté, on laisse
+      // ingredient_catalog_id à null et l'admin pourra ajuster via l'UI.
+      for (const line of parsedLines) {
+        let ingredientCatalogId: string | null = null;
+        let ingredientLabel = line.name;
+
+        const { data: catalogData, error: catalogError } = await supabase
+          .from("ingredients_catalog")
+          .select("id, display_name, canonical_name")
+          .ilike("display_name", `%${line.name}%`)
+          .limit(1);
+
+        if (!catalogError && catalogData && catalogData.length > 0) {
+          const match = catalogData[0] as {
+            id: string;
+            display_name: string | null;
+            canonical_name: string | null;
+          };
+          ingredientCatalogId = match.id;
+          ingredientLabel =
+            match.display_name || match.canonical_name || line.name;
+        }
+
+        nextRows.push({
+          id: undefined,
+          ingredient_catalog_id: ingredientCatalogId,
+          ingredient_label: ingredientLabel,
+          quantity:
+            typeof line.quantity === "number" ? String(line.quantity) : "",
+          unit: line.unit ?? "",
+          original_text: line.originalText,
+          preparation_notes: "",
+          is_optional: false,
+          order_index: orderIndex
+        });
+        orderIndex += 1;
+      }
+
+      setLocalRows(nextRows);
+    } catch (_err) {
+      setPrefillError(
+        "Erreur lors de la récupération ou de l'analyse des ingrédients."
+      );
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    prefillFromIngredientsText
+  }));
+
   if (isError) {
     return (
       <p className="text-xs text-red-300">
@@ -246,10 +345,23 @@ export const RecipeIngredientsEditor: React.FC<
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Ingrédients structurés
-        </h3>
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Ingrédients structurés
+          </h3>
+          {prefillError && (
+            <p className="mt-1 text-[11px] text-red-300">{prefillError}</p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={prefillFromIngredientsText}
+          >
+            Pré-remplir depuis le texte
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -425,4 +537,6 @@ export const RecipeIngredientsEditor: React.FC<
       </div>
     </div>
   );
-};
+});
+
+RecipeIngredientsEditor.displayName = "RecipeIngredientsEditor";

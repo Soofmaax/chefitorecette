@@ -528,8 +528,8 @@ const AdminRecipesPage = () => {
             Recettes – Mode enrichi
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Filtrez et enrichissez les recettes existantes avec des contenus
-            enrichis (science, audio, SEO).
+            Clique sur « Créer une recette » pour en ajouter une nouvelle, ou
+            sélectionne une recette existante pour l&apos;éditer et l&apos;enrichir.
           </p>
           {total > 0 && (
             <p className="mt-1 text-xs text-slate-500">
@@ -538,121 +538,135 @@ const AdminRecipesPage = () => {
           )}
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <input
-              type="text"
-              placeholder="Recherche plein texte (titre, description, ingrédients)…"
-              className="w-full min-w-[260px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-80"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="ID ou slug exact…"
-              className="w-full min-w-[220px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-64"
-              value={slugOrId}
-              onChange={(e) => setSlugOrId(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
+        <div className="flex flex-col gap-2 md:items-end">
+          <Link href="/admin/recipes/create">
+            <Button
               type="button"
-              onClick={resetFilters}
-              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
+              variant="primary"
+              className="inline-flex items-center gap-2 text-xs"
             >
-              Réinitialiser les filtres
-            </button>
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            >
-              <option value="all">Tous statuts</option>
-              <option value="draft">Brouillon</option>
-              <option value="scheduled">Programmé</option>
-              <option value="published">Publié</option>
-            </select>
+              <span>+ Créer une recette</span>
+            </Button>
+          </Link>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
-            >
-              <option value="all">Toutes difficultés</option>
-              <option value="beginner">Débutant</option>
-              <option value="intermediate">Intermédiaire</option>
-              <option value="advanced">Avancé</option>
-            </select>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              <input
+                type="text"
+                placeholder="Recherche plein texte (titre, description, ingrédients)…"
+                className="w-full min-w-[260px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-80"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="ID ou slug exact…"
+                className="w-full min-w-[220px] rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 md:w-64"
+                value={slugOrId}
+                onChange={(e) => setSlugOrId(e.target.value)}
+              />
+            </div>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">Toutes catégories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
+              >
+                Réinitialiser les filtres
+              </button>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
+              >
+                <option value="all">Tous statuts</option>
+                <option value="draft">Brouillon</option>
+                <option value="scheduled">Programmé</option>
+                <option value="published">Publié</option>
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={difficultyFilter}
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+              >
+                <option value="all">Toutes difficultés</option>
+                <option value="beginner">Débutant</option>
+                <option value="intermediate">Intermédiaire</option>
+                <option value="advanced">Avancé</option>
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="all">Toutes catégories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={cuisineFilter}
+                onChange={(e) => setCuisineFilter(e.target.value)}
+              >
+                <option value="all">Toutes cuisines</option>
+                {cuisines.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={ragFilter}
+                onChange={(e) => setRagFilter(e.target.value as RagFilter)}
+              >
+                <option value="all">Toutes structures RAG</option>
+                <option value="complete">RAG complet</option>
+                <option value="partial">RAG partiel</option>
+                <option value="missing">RAG absent</option>
+                <option value="no_ingredients">
+                  Sans ingrédients normalisés
                 </option>
-              ))}
-            </select>
+                <option value="no_steps">Sans étapes enrichies</option>
+                <option value="no_concepts">Sans concepts scientifiques</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={cuisineFilter}
-              onChange={(e) => setCuisineFilter(e.target.value)}
-            >
-              <option value="all">Toutes cuisines</option>
-              {cuisines.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={conservationFilter}
+                onChange={(e) =>
+                  setConservationFilter(
+                    e.target.value as ConservationFilter
+                  )
+                }
+              >
+                <option value="all">Conservation (toutes)</option>
+                <option value="with">Avec conservation/service</option>
+                <option value="without">Sans conservation/service</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={ragFilter}
-              onChange={(e) => setRagFilter(e.target.value as RagFilter)}
-            >
-              <option value="all">Toutes structures RAG</option>
-              <option value="complete">RAG complet</option>
-              <option value="partial">RAG partiel</option>
-              <option value="missing">RAG absent</option>
-              <option value="no_ingredients">
-                Sans ingrédients normalisés
-              </option>
-              <option value="no_steps">Sans étapes enrichies</option>
-              <option value="no_concepts">Sans concepts scientifiques</option>
-            </select>
-
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={conservationFilter}
-              onChange={(e) =>
-                setConservationFilter(
-                  e.target.value as ConservationFilter
-                )
-              }
-            >
-              <option value="all">Conservation (toutes)</option>
-              <option value="with">Avec conservation/service</option>
-              <option value="without">Sans conservation/service</option>
-            </select>
-
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={utensilsFilter}
-              onChange={(e) =>
-                setUtensilsFilter(e.target.value as UtensilsFilter)
-              }
-            >
-              <option value="all">Ustensiles (tous)</option>
-              <option value="with">Avec ustensiles</option>
-              <option value="without">Sans ustensiles</option>
-            </select>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={utensilsFilter}
+                onChange={(e) =>
+                  setUtensilsFilter(e.target.value as UtensilsFilter)
+                }
+              >
+                <option value="all">Ustensiles (tous)</option>
+                <option value="with">Avec ustensiles</option>
+                <option value="without">Sans ustensiles</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

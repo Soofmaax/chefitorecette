@@ -140,6 +140,38 @@ Cette logique est utilisée :
 
 Le backoffice admin est pensé pour que **tous les champs nécessaires au RAG et au front** soient pilotables depuis l’interface, sans passer par SQL.
 
+#### 3.2.0. Import depuis un texte brut (flux principal actuel)
+
+Pour limiter au maximum la saisie manuelle, l’admin propose un flux centré sur le **coller → pré‑remplir** :
+
+- Sur `/admin/recipes/create` et `/admin/recipes/[id]/edit` :
+  - section **“0. Import depuis un texte brut (optionnel)”** en haut du formulaire,
+  - zone de texte où coller la **recette complète** (histoire, ingrédients, préparation, conservation, tags…),
+  - bouton **“Pré‑remplir depuis le texte”**.
+
+À partir de ce texte brut, le parseur (`parseRecipeFromRawText`) essaie de déduire automatiquement :
+
+- **Infos de base** : `title`, `servings`, `difficulty`, `prep_time_min`, `cook_time_min`, `rest_time_min`.
+- **Texte détaillé** : `description`, `ingredients_text`, `instructions_detailed`.
+- **Conservation & service** :
+  - `storage_instructions`, `storage_duration_days`,
+  - `serving_temperatures` (chaud, tiède, ambiante, froid, au choix),
+  - `storage_modes` (réfrigérateur, congélateur, ambiante, sous vide, boîte hermétique, au choix).
+- **Éditorial** : `chef_tips`, `cultural_history`, `techniques`, `nutritional_notes`, `source_info`.
+- **Structuré** :
+  - `tags` (ex. “Tag Trello : Salades & Entrées”),
+  - `dietary_labels` (vegan, végétarien, sans gluten, etc. détectés dans le texte),
+  - liste d’ustensiles texte (`utensils`), utilisée ensuite pour cocher les cases dans la section ustensiles.
+
+En mode édition (`/admin/recipes/[id]/edit`), un second bouton permet d’aller plus loin :
+
+- **“Pré‑remplir ingrédients / étapes / concepts”** :
+  - appelle l’éditeur d’**ingrédients structurés** pour convertir `ingredients_text` en lignes `recipe_ingredients_normalized` (quantité, unité, lien au `ingredients_catalog`),
+  - appelle l’éditeur d’**étapes enrichies** pour découper `instructions_detailed` en `recipe_steps_enhanced`,
+  - appelle l’éditeur de **concepts scientifiques** pour suggérer des liens `recipe_concepts` à partir du texte de la recette.
+
+La **publication** n’est plus bloquée par l’absence d’ingrédients normalisés, d’étapes enrichies ou de concepts scientifiques ; ces éléments restent cependant fortement recommandés pour avoir une recette “complète Chefito” et un bon RAG.
+
 #### 3.2.1. Liste des recettes `/admin/recipes`
 
 Affichage (via `src/app/admin/recipes/page.tsx`) :
@@ -409,8 +441,13 @@ En pratique, l’usage attendu du backoffice Chefito est le suivant :
    - Utiliser `/admin/editorial-calendar` pour planifier les recettes de l’année (titre, mois, priorité, angle).
 3. **Créer les recettes**  
    - Créer une recette depuis le calendrier ou directement via `/admin/recipes/create`.
+   - Coller le texte brut de la recette dans la section “0. Import depuis un texte brut”, cliquer sur “Pré‑remplir depuis le texte” pour remplir automatiquement les champs principaux.
 4. **Enrichir les recettes**  
-   - Remplir les champs éditoriaux, normaliser les ingrédients, enrichir les étapes, lier les concepts, associer les audios.
+   - Sur `/admin/recipes/[id]/edit`, utiliser le bouton “Pré‑remplir ingrédients / étapes / concepts” pour générer automatiquement :
+     - les ingrédients normalisés,
+     - les étapes enrichies,
+     - les concepts scientifiques liés.
+   - Corriger/compléter si nécessaire, puis associer les audios si besoin.
 5. **Contrôler la qualité**  
    - Utiliser les badges de complétude et la validation pre‑publish pour s’assurer qu’une recette est “complète Chefito”.
 6. **Publier & prévisualiser**  
@@ -451,12 +488,12 @@ En pratique, l’usage attendu du backoffice Chefito est le suivant :
 3. **Planifier quelques recettes**  
    - Sur `/admin/editorial-calendar`, créer quelques lignes (mois, priorité, angle).
 4. **Créer une recette à partir d’une ligne éditoriale**  
-   - Depuis le calendrier, cliquer sur “Créer la recette” → remplir les champs de base.
+   - Depuis le calendrier, cliquer sur “Créer la recette” → coller le texte brut de la recette dans “0. Import depuis un texte brut” puis cliquer sur “Pré‑remplir depuis le texte” pour remplir automatiquement les champs principaux (titre, description, temps, portions, ingrédients texte, instructions…).
 5. **Enrichir la recette**  
-   - Onglet ingrédients normalisés : saisir les quantités structurées.  
-   - Onglet étapes enrichies : rédiger des steps pédagogiques.  
-   - Onglet concepts : lier 1–3 concepts de la knowledge base.  
-   - Onglet SEO : vérifier le titre/meta et le JSON-LD.
+   - Sur `/admin/recipes/[id]/edit` :
+     - bouton “Pré‑remplir depuis le texte” si tu veux ré-importer / ajuster à partir d’un texte mis à jour,
+     - bouton “Pré‑remplir ingrédients / étapes / concepts” pour générer automatiquement les ingrédients normalisés, les étapes enrichies et les concepts scientifiques liés à partir du texte de la recette,
+     - vérifier/corriger les sections Ingrédients structurés, Étapes enrichies, Concepts, puis l’onglet SEO (titre/meta et JSON-LD).
 6. **Publier**  
    - Cliquer sur “Publier”, corriger les points bloquants signalés par la modale si besoin.  
    - Prévisualiser via `/admin/recipes/[id]/preview`.

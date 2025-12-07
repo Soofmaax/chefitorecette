@@ -10,6 +10,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
+import { parseRecipeFromRawText } from "@/lib/recipeImport";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -127,6 +128,9 @@ const AdminCreateRecipePage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rawImportText, setRawImportText] = useState("");
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     control,
@@ -290,6 +294,129 @@ const AdminCreateRecipePage = () => {
     }
   }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
 
+  const handleImportFromText = () => {
+    setImportMessage(null);
+    setImportError(null);
+
+    const trimmed = rawImportText.trim();
+    if (!trimmed) {
+      setImportError("Collez d'abord le texte complet de la recette dans la zone ci-dessus.");
+      return;
+    }
+
+    const parsed = parseRecipeFromRawText(trimmed);
+
+    if (
+      !parsed.title &&
+      !parsed.description &&
+      !parsed.ingredientsText &&
+      !parsed.instructionsText
+    ) {
+      setImportError(
+        "Impossible d'analyser ce texte. Vérifiez qu'il contient bien des sections Ingrédients / Préparation."
+      );
+      return;
+    }
+
+    if (parsed.title) {
+      setValue("title", parsed.title, { shouldDirty: true });
+    }
+    if (parsed.description) {
+      setValue("description", parsed.description, { shouldDirty: true });
+    }
+    if (typeof parsed.servings === "number" && !Number.isNaN(parsed.servings)) {
+      setValue("servings", parsed.servings, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.prepTimeMin === "number" &&
+      !Number.isNaN(parsed.prepTimeMin)
+    ) {
+      setValue("prep_time_min", parsed.prepTimeMin, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.cookTimeMin === "number" &&
+      !Number.isNaN(parsed.cookTimeMin)
+    ) {
+      setValue("cook_time_min", parsed.cookTimeMin, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.restTimeMin === "number" &&
+      !Number.isNaN(parsed.restTimeMin)
+    ) {
+      setValue("rest_time_min", parsed.restTimeMin, { shouldDirty: true });
+    }
+    if (parsed.ingredientsText) {
+      setValue("ingredients_text", parsed.ingredientsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.instructionsText) {
+      setValue("instructions_detailed", parsed.instructionsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.difficulty) {
+      setValue("difficulty", parsed.difficulty, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.storageDurationDays === "number" &&
+      !Number.isNaN(parsed.storageDurationDays)
+    ) {
+      setValue("storage_duration_days", parsed.storageDurationDays, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageInstructions) {
+      setValue("storage_instructions", parsed.storageInstructions, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      setValue("tags", parsed.tags, { shouldDirty: true });
+    }
+    if (parsed.chefTips) {
+      setValue("chef_tips", parsed.chefTips, { shouldDirty: true });
+    }
+    if (parsed.culturalHistory) {
+      setValue("cultural_history", parsed.culturalHistory, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.techniques) {
+      setValue("techniques", parsed.techniques, { shouldDirty: true });
+    }
+    if (parsed.nutritionalNotes) {
+      setValue("nutritional_notes", parsed.nutritionalNotes, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.dietaryLabels && parsed.dietaryLabels.length > 0) {
+      setValue("dietary_labels", parsed.dietaryLabels, {
+        shouldDirty: true
+      });
+    }
+    if (
+      parsed.servingTemperatures &&
+      parsed.servingTemperatures.length > 0
+    ) {
+      setValue("serving_temperatures", parsed.servingTemperatures, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageModes && parsed.storageModes.length > 0) {
+      setValue("storage_modes", parsed.storageModes, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.sourceInfo) {
+      setValue("source_info", parsed.sourceInfo, { shouldDirty: true });
+    }
+
+    setImportMessage(
+      "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."
+    );
+  };
+
   const onSubmit = async (values: RecipeFormValues) => {
     setMessage(null);
     setErrorMessage(null);
@@ -400,13 +527,20 @@ const AdminCreateRecipePage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-            Nouvelle recette – depuis le calendrier éditorial
+            Nouvelle recette
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Crée une fiche recette brouillon à partir d&apos;une ligne du
-            calendrier éditorial, puis continue son enrichissement dans
-            l&apos;éditeur détaillé.
+            Étapes conseillées : 1) colle le texte complet de la recette dans la
+            zone &quot;0. Import depuis un texte brut&quot;, 2) clique sur
+            &quot;Pré-remplir depuis le texte&quot;, 3) ajoute une image puis
+            enregistre la recette.
           </p>
+          {editorialId && (
+            <p className="mt-1 text-xs text-slate-500">
+              Cette recette est liée à une entrée du calendrier éditorial
+              (titre, catégorie, difficulté et tags peuvent déjà être pré-remplis).
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -424,6 +558,38 @@ const AdminCreateRecipePage = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="card space-y-6 px-5 py-5"
       >
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            0. Import depuis un texte brut
+          </h2>
+          <p className="text-xs text-slate-500">
+            Colle ici le texte complet de la recette, puis clique sur
+            &quot;Pré-remplir depuis le texte&quot;. Les champs principaux
+            (titre, temps, portions, ingrédients texte, instructions) seront remplis automatiquement.
+          </p>
+          <textarea
+            rows={8}
+            className="mt-2 w-full font-mono text-xs"
+            placeholder="Colle ici la recette brute (copiée depuis ton doc, Trello, etc.)…"
+            value={rawImportText}
+            onChange={(e) => setRawImportText(e.target.value)}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+              onClick={handleImportFromText}
+            >
+              Pré-remplir depuis le texte
+            </Button>
+            {importMessage && (
+              <p className="text-emerald-300">{importMessage}</p>
+            )}
+            {importError && <p className="text-red-300">{importError}</p>}
+          </div>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
             1. Infos de base
