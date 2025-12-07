@@ -528,7 +528,7 @@ const AdminRecipesPage = () => {
             Recettes – Mode enrichi
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Clique sur “Créer une recette” pour en ajouter une nouvelle, ou
+            Clique sur "Créer une recette" pour en ajouter une nouvelle, ou
             sélectionne une recette existante pour l&apos;éditer et l&apos;enrichir.
           </p>
           {total > 0 && (
@@ -538,7 +538,7 @@ const AdminRecipesPage = () => {
           )}
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 md:items-end">
+        <div className="flex flex-col gap-2 md:items-end">
           <Link href="/admin/recipes/create">
             <Button
               type="button"
@@ -669,6 +669,7 @@ const AdminRecipesPage = () => {
             </div>
           </div>
         </div>
+      </div>
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-xs text-slate-400">
