@@ -34,9 +34,21 @@ async function fetchUserWithRole(user: User): Promise<AuthUser> {
     .eq("id", user.id)
     .single();
 
+  const rawRole = (profile?.role ?? null) as string | null;
+  let appRole: Role = null;
+
+  if (rawRole) {
+    const lc = rawRole.toLowerCase();
+    if (lc === "admin") {
+      appRole = "admin";
+    } else if (lc === "editor") {
+      appRole = "editor";
+    }
+  }
+
   return {
     ...user,
-    appRole: (profile?.role as Role) ?? null
+    appRole
   };
 }
 
