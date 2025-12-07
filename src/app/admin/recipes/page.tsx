@@ -549,17 +549,6 @@ const AdminRecipesPage = () => {
             </Button>
           </Link>
 
-          <div className="flex flex-col items-stretch gap-2 md:items-end">
-          <Link href="/admin/recipes/create">
-            <Button
-              type="button"
-              variant="primary"
-              className="inline-flex items-center gap-2 text-xs"
-            >
-              <span>+ Créer une recette</span>
-            </Button>
-          </Link>
-
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <input
@@ -579,105 +568,107 @@ const AdminRecipesPage = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
-            >
-              Réinitialiser les filtres
-            </button>
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            >
-              <option value="all">Tous statuts</option>
-              <option value="draft">Brouillon</option>
-              <option value="scheduled">Programmé</option>
-              <option value="published">Publié</option>
-            </select>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-800"
+              >
+                Réinitialiser les filtres
+              </button>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
+              >
+                <option value="all">Tous statuts</option>
+                <option value="draft">Brouillon</option>
+                <option value="scheduled">Programmé</option>
+                <option value="published">Publié</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
-            >
-              <option value="all">Toutes difficultés</option>
-              <option value="beginner">Débutant</option>
-              <option value="intermediate">Intermédiaire</option>
-              <option value="advanced">Avancé</option>
-            </select>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={difficultyFilter}
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+              >
+                <option value="all">Toutes difficultés</option>
+                <option value="beginner">Débutant</option>
+                <option value="intermediate">Intermédiaire</option>
+                <option value="advanced">Avancé</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">Toutes catégories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="all">Toutes catégories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={cuisineFilter}
+                onChange={(e) => setCuisineFilter(e.target.value)}
+              >
+                <option value="all">Toutes cuisines</option>
+                {cuisines.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={ragFilter}
+                onChange={(e) => setRagFilter(e.target.value as RagFilter)}
+              >
+                <option value="all">Toutes structures RAG</option>
+                <option value="complete">RAG complet</option>
+                <option value="partial">RAG partiel</option>
+                <option value="missing">RAG absent</option>
+                <option value="no_ingredients">
+                  Sans ingrédients normalisés
                 </option>
-              ))}
-            </select>
+                <option value="no_steps">Sans étapes enrichies</option>
+                <option value="no_concepts">Sans concepts scientifiques</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={cuisineFilter}
-              onChange={(e) => setCuisineFilter(e.target.value)}
-            >
-              <option value="all">Toutes cuisines</option>
-              {cuisines.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={conservationFilter}
+                onChange={(e) =>
+                  setConservationFilter(
+                    e.target.value as ConservationFilter
+                  )
+                }
+              >
+                <option value="all">Conservation (toutes)</option>
+                <option value="with">Avec conservation/service</option>
+                <option value="without">Sans conservation/service</option>
+              </select>
 
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={ragFilter}
-              onChange={(e) => setRagFilter(e.target.value as RagFilter)}
-            >
-              <option value="all">Toutes structures RAG</option>
-              <option value="complete">RAG complet</option>
-              <option value="partial">RAG partiel</option>
-              <option value="missing">RAG absent</option>
-              <option value="no_ingredients">
-                Sans ingrédients normalisés
-              </option>
-              <option value="no_steps">Sans étapes enrichies</option>
-              <option value="no_concepts">Sans concepts scientifiques</option>
-            </select>
-
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={conservationFilter}
-              onChange={(e) =>
-                setConservationFilter(
-                  e.target.value as ConservationFilter
-                )
-              }
-            >
-              <option value="all">Conservation (toutes)</option>
-              <option value="with">Avec conservation/service</option>
-              <option value="without">Sans conservation/service</option>
-            </select>
-
-            <select
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              value={utensilsFilter}
-              onChange={(e) =>
-                setUtensilsFilter(e.target.value as UtensilsFilter)
-              }
-            >
-              <option value="all">Ustensiles (tous)</option>
-              <option value="with">Avec ustensiles</option>
-              <option value="without">Sans ustensiles</option>
-            </select>
+              <select
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={utensilsFilter}
+                onChange={(e) =>
+                  setUtensilsFilter(e.target.value as UtensilsFilter)
+                }
+              >
+                <option value="all">Ustensiles (tous)</option>
+                <option value="with">Avec ustensiles</option>
+                <option value="without">Sans ustensiles</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-xs text-slate-400">
