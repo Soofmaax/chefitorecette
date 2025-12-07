@@ -1214,16 +1214,17 @@ const AdminEditRecipePage = () => {
         {/* Import texte brut pour pré-remplir le formulaire */}
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            0. Import depuis un texte brut (optionnel)
+            0. Import depuis un texte brut
           </h2>
           <p className="text-xs text-slate-500">
-            Colle ici le texte complet de la recette (histoire, ingrédients, préparation…).{" "}
-            Un analyseur simple tentera de pré-remplir les champs principaux (titre, temps, ingrédients, étapes).
+            Colle ici le texte complet de la recette, puis clique sur
+            &quot;Pré-remplir depuis le texte&quot;. Les champs principaux
+            (titre, temps, portions, ingrédients texte, instructions) seront remplis automatiquement.
           </p>
           <textarea
             rows={8}
             className="mt-2 w-full font-mono text-xs"
-            placeholder="Collez ici la recette brute (copiée depuis votre doc, Trello, etc.)…"
+            placeholder="Colle ici la recette brute (copiée depuis ton doc, Trello, etc.)…"
             value={rawImportText}
             onChange={(e) => setRawImportText(e.target.value)}
           />
@@ -1634,8 +1635,7 @@ const AdminEditRecipePage = () => {
             3. Ustensiles / matériel
           </h2>
           <p className="text-xs text-slate-500">
-            Sélectionne les ustensiles et équipements importants nécessaires pour
-            réaliser la recette (four, airfryer, Thermomix, etc.).
+            Coche les ustensiles utilisés pour cette recette (facultatif).
           </p>
           <div className="flex flex-wrap gap-3 text-xs">
             {utensilsCatalog.length === 0 ? (
@@ -1817,9 +1817,8 @@ const AdminEditRecipePage = () => {
                 }}
               />
               <p className="mt-1 text-xs text-slate-500">
-                Vous pouvez fournir une URL ou uploader un fichier. En cas
-                d&apos;upload, le fichier est stocké dans Supabase Storage
-                (taille max 5 Mo).
+                Tu peux soit coller une URL d&apos;image, soit uploader un fichier
+                (stocké dans Supabase Storage).
               </p>
             </div>
 
@@ -1883,9 +1882,8 @@ const AdminEditRecipePage = () => {
             5. SEO avancé – Schema.org Recipe (JSON-LD)
           </h2>
           <p className="text-xs text-slate-500">
-            Le JSON-LD ci-dessous est généré automatiquement à partir des champs
-            de la recette. Il pourra être injecté côté front pour améliorer la
-            compréhension de la recette par les moteurs de recherche.
+            Zone avancée (optionnelle) : le JSON-LD est généré automatiquement
+            à partir des champs de la recette et peut être activé pour le site public.
           </p>
 
           <div className="flex items-center gap-2">

@@ -527,13 +527,20 @@ const AdminCreateRecipePage = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-slate-50">
-            Nouvelle recette – depuis le calendrier éditorial
+            Nouvelle recette
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Crée une fiche recette brouillon à partir d&apos;une ligne du
-            calendrier éditorial, puis continue son enrichissement dans
-            l&apos;éditeur détaillé.
+            Étapes conseillées : 1) colle le texte complet de la recette dans la
+            zone &quot;0. Import depuis un texte brut&quot;, 2) clique sur
+            &quot;Pré-remplir depuis le texte&quot;, 3) ajoute une image puis
+            enregistre la recette.
           </p>
+          {editorialId && (
+            <p className="mt-1 text-xs text-slate-500">
+              Cette recette est liée à une entrée du calendrier éditorial
+              (titre, catégorie, difficulté et tags peuvent déjà être pré-remplis).
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -553,16 +560,17 @@ const AdminCreateRecipePage = () => {
       >
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            0. Import depuis un texte brut (optionnel)
+            0. Import depuis un texte brut
           </h2>
           <p className="text-xs text-slate-500">
-            Colle ici le texte complet de la recette (histoire, ingrédients, préparation…).
-            Un analyseur simple tentera de pré-remplir le formulaire (titre, temps, ingrédients, étapes).
+            Colle ici le texte complet de la recette, puis clique sur
+            &quot;Pré-remplir depuis le texte&quot;. Les champs principaux
+            (titre, temps, portions, ingrédients texte, instructions) seront remplis automatiquement.
           </p>
           <textarea
             rows={8}
             className="mt-2 w-full font-mono text-xs"
-            placeholder="Collez ici la recette brute (copiée depuis votre doc, Trello, etc.)…"
+            placeholder="Colle ici la recette brute (copiée depuis ton doc, Trello, etc.)…"
             value={rawImportText}
             onChange={(e) => setRawImportText(e.target.value)}
           />
