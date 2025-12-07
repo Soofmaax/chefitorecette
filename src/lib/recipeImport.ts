@@ -16,6 +16,10 @@ export interface ParsedRecipeFromText {
   utensils?: string[];
 }
 
+export interface ParsedStepFromText {
+  instruction: string;
+}
+
 /**
  * Supprime les icônes / emojis de début de ligne ainsi que les puces.
  * L'objectif est d'obtenir une ligne texte exploitable.
@@ -456,4 +460,38 @@ export const parseIngredientsTextToStructured = (
   });
 
   return result;
+};
+
+export const parseInstructionsToSteps = (
+  instructionsText: string
+): ParsedStepFromText[] => {
+  const text = normalizeText(instructionsText);
+  if (!text) return [];
+
+  // On commence par découper en paragraphes séparés par des lignes vides.
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter((p) => p !== "");
+
+  const chunks =
+    paragraphs.length > 1
+      ? paragraphs
+      : text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l !== "");
+
+  const steps: ParsedStepFromText[] = [];
+
+  chunks.forEach((raw) => {
+    let line = stripIconPrefix(raw);
+    // Supprime un éventuel numéro d'étape au début (1., 2), 3️⃣, etc.)
+    line = line.replace(/^[0-9]+[)º°.\-:]?\s*/, "").trim();
+    if (!line) return;
+
+    steps.push({ instruction: line });
+  });
+
+  return steps;
 };

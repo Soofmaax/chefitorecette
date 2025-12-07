@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { parseInstructionsToSteps } from "@/lib/recipeImport";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { StepEditor, StepData } from "./StepEditor";
@@ -71,13 +72,11 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
     queryFn: () => fetchSteps(recipeId)
   });
 
-  const [localSteps, setLocalSteps] = useState<StepData[]>([]);
+  const [localSteps, setLocalSteps] = useStat<<StepData[]>([]);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (steps) {
-      setLocalSteps(steps);
-    }
-  }, [steps]);
+    if (steps);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -184,6 +183,58 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
     });
   };
 
+  const prefillFromRecipeText = async () => {
+    setPrefillError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("instructions_detailed")
+        .eq("id", recipeId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const instructions =
+        (data as { instructions_detailed: string | null })
+          .instructions_detailed;
+
+      if (!instructions || instructions.trim() === "") {
+        setPrefillError(
+          "Aucun texte d'instructions détaillées n'est défini pour cette recette."
+        );
+        return;
+      }
+
+      const parsed = parseInstructionsToSteps(instructions);
+
+      if (parsed.length === 0) {
+        setPrefillError(
+          "Impossible de découper les instructions en étapes. Vérifie le format du texte."
+        );
+        return;
+      }
+
+      const nextSteps: StepData[] = parsed.map((item, index) => ({
+        step_number: index + 1,
+        title: "",
+        instruction: item.instruction,
+        estimated_duration: "",
+        temperature_celsius: "",
+        difficulty_level: "",
+        scientific_explanation: ""
+      }));
+
+      setLocalSteps(nextSteps);
+    } catch (_err) {
+      setPrefillError(
+        "Erreur lors de la récupération ou de l'analyse des instructions."
+      );
+    }
+  };
+
   if (isError) {
     return (
       <p className="text-xs text-red-300">
@@ -195,10 +246,23 @@ export const RecipeStepsEditor: React.FC<RecipeStepsEditorProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Étapes enrichies
-        </h3>
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Étapes enrichies
+          </h3>
+          {prefillError && (
+            <p className="mt-1 text-[11px] text-red-300">{prefillError}</p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="text-xs"
+            onClick={prefillFromRecipeText}
+          >
+            Pré-remplir depuis le texte
+          </Button>
           <Button
             type="button"
             variant="secondary"
