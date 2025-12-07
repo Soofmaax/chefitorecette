@@ -539,3 +539,5 @@ export const RecipeIngredientsEditor = React.forwardRef<
     </div>
   );
 });
+
+RecipeIngredientsEditor.displayName = "RecipeIngredientsEditor";

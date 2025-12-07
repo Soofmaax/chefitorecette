@@ -334,3 +334,5 @@ export const RecipeStepsEditor = React.forwardRef<
     </div>
   );
 });
+
+RecipeStepsEditor.displayName = "RecipeStepsEditor";

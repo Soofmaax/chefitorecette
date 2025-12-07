@@ -422,3 +422,5 @@ export const RecipeConceptsEditor = React.forwardRef<
     </div>
   );
 });
+
+RecipeConceptsEditor.displayName = "RecipeConceptsEditor";
