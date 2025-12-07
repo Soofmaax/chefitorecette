@@ -1,4 +1,11 @@
+import type { RecipeFormValues } from "@/types/forms";
+
 export type ParsedDifficulty = "beginner" | "intermediate" | "advanced";
+
+export type ParsedDietaryLabel = RecipeFormValues["dietary_labels"][number];
+export type ParsedServingTemperature =
+  RecipeFormValues["serving_temperatures"][number];
+export type ParsedStorageMode = RecipeFormValues["storage_modes"][number];
 
 export interface ParsedRecipeFromText {
   title?: string;
@@ -6,6 +13,7 @@ export interface ParsedRecipeFromText {
   servings?: number;
   prepTimeMin?: number;
   cookTimeMin?: number;
+  restTimeMin?: number;
   ingredientsText?: string;
   instructionsText?: string;
   difficulty?: ParsedDifficulty;
@@ -18,6 +26,10 @@ export interface ParsedRecipeFromText {
   culturalHistory?: string;
   techniques?: string;
   nutritionalNotes?: string;
+  dietaryLabels?: ParsedDietaryLabel[];
+  servingTemperatures?: ParsedServingTemperature[];
+  storageModes?: ParsedStorageMode[];
+  sourceInfo?: string;
 }
 
 export interface ParsedStepFromText {
@@ -69,6 +81,7 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
   let difficulty: ParsedDifficulty | undefined;
   let prepTimeMin: number | undefined;
   let cookTimeMin: number | undefined;
+  let restTimeMin: number | undefined;
   let ingredientsText: string | undefined;
   let instructionsText: string | undefined;
 
@@ -148,6 +161,34 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
   }
 
   const cookMatch = text.match(
+    /cuisson[^:\n]*:\s*(\d+)(?:\s*(?:à|\-)\s*(\d+))?\s*(?:min|minutes?)/i
+  );
+  if (cookMatch) {
+    const a = Number(cookMatch[1]);
+    const rawB = cookMatch[2];
+    let b: number | null = null;
+    if (rawB) {
+      const parsedB = Number(rawB);
+      if (!Number.isNaN(parsedB)) {
+        b = parsedB;
+      }
+    }
+    cookTimeMin =
+      typeof b === "number" ? Math.round((a + b) / 2) : a;
+  }
+
+  // --- Temps de repos (approximation à partir de formulations comme "laisser reposer X min")
+  const restMatch =
+    text.match(/repos[^0-9]{0,20}(\d+)\s*(?:min|minutes?)/i) ||
+    text.match(/reposer[^0-9]{0,20}(\d+)\s*(?:min|minutes?)/i);
+  if (restMatch) {
+    const r = Number(restMatch[1]);
+    if (!Number.isNaN(r)) {
+      restTimeMin = r;
+    }
+  }
+
+  // --- Bloc Ingrédients -> ingredientsTextkMatch = text.match(
     /cuisson[^:\n]*:\s*(\d+)(?:\s*(?:à|\-)\s*(\d+))?\s*(?:min|minutes?)/i
   );
   if (cookMatch) {
@@ -322,6 +363,73 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
   });
   const chefTips = tipsLines.length > 0 ? tipsLines.join(" ") : undefined;
 
+  // --- Techniques (section dédiée si présente)
+  let techniques: string | undefined;
+  const idxTech = lines.findIndex((l) =>
+    /techniques?/i.test(stripIconPrefix(l))
+  );
+  if (idxTech !== -1) {
+    let endIdx = lines.length;
+    for (let i = idxTech + 1; i < lines.length; i += 1) {
+      const s = stripIconPrefix(lines[i]).toLowerCase();
+      if (
+        /conservation/.test(s) ||
+        /meal prep/.test(s) ||
+        /anecdote/.test(s) ||
+        /notes? nutrition/i.test(s) ||
+        /tag trello/.test(s)
+      ) {
+        endIdx = i;
+        break;
+      }
+    }
+    const techLines = lines
+      .slice(idxTech + 1, endIdx)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+    if (techLines.length > 0) {
+      techniques = techLines.join(" ");
+    }
+  }
+
+  // --- Notes nutritionnelles (section dédiée si présente)
+  let nutritionalNotes: string | undefined;
+  const idxNutri = lines.findIndex((l) =>
+    /notes? nutrition|c[oô]t[eé] nutrition/i.test(stripIconPrefix(l))
+  );
+  if (idxNutri !== -1) {
+    let endIdx = lines.length;
+    for (let i = idxNutri + 1; i < lines.length; i += 1) {
+      const s = stripIconPrefix(lines[i]).toLowerCase();
+      if (/tag trello/.test(s)) {
+        endIdx = i;
+        break;
+      }
+    }
+    const nutriLines = lines
+      .slice(idxNutri + 1, endIdx)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+    if (nutriLines.length > 0) {
+      nutritionalNotes = nutriLines.join(" ");
+    }
+  }
+
+  // --- Source (ex. "Source : ...")
+  let sourceInfo: string | undefined;
+  const sourceLine = lines.find((l) =>
+    /^source\b/i.test(stripIconPrefix(l))
+  );
+  if (sourceLine) {
+    const s = stripIconPrefix(sourceLine);
+    const m = s.match(/^source\s*:\s*(.+)$/i);
+    if (m && m[1].trim()) {
+      sourceInfo = m[1].trim();
+    } else if (s.trim().length > 6) {
+      sourceInfo = s.trim();
+    }
+  }
+
   // --- Tags simples (ex. "Tag Trello : ...")
   const tags: string[] = [];
   lines.forEach((l) => {
@@ -373,12 +481,119 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     });
   }
 
+  // --- Labels alimentaires (végétarien, vegan, sans gluten, etc.)
+  const dietaryLabels: ParsedDietaryLabel[] = [];
+  const addDietary = (label: ParsedDietaryLabel) => {
+    if (!dietaryLabels.includes(label)) {
+      dietaryLabels.push(label);
+    }
+  };
+
+  const lcText = text.toLowerCase();
+
+  if (/vegan/.test(lcText)) {
+    addDietary("vegan");
+  }
+  if (/(végétalien|vegetalien)/.test(lcText)) {
+    addDietary("vegetalien");
+  }
+  if (/(végétarien|vegetarien)/.test(lcText)) {
+    addDietary("vegetarien");
+  }
+  if (/pesc[ée]tarien/.test(lcText)) {
+    addDietary("pescetarien");
+  }
+  if (/sans gluten/.test(lcText)) {
+    addDietary("sans_gluten");
+  }
+  if (/sans lactose/.test(lcText)) {
+    addDietary("sans_lactose");
+  }
+  if (/sans\s+(?:œuf|oeuf)s?/.test(lcText)) {
+    addDietary("sans_oeuf");
+  }
+  if (/sans arachide/.test(lcText)) {
+    addDietary("sans_arachide");
+  }
+  if (/sans fruits?\s+à\s+coque|sans fruits?\s+a\s+coque/.test(lcText)) {
+    addDietary("sans_fruits_a_coque");
+  }
+  if (/sans soja/.test(lcText)) {
+    addDietary("sans_soja");
+  }
+  if (/sans sucre ajout[é|e]/.test(lcText)) {
+    addDietary("sans_sucre_ajoute");
+  }
+  if (/sans sel ajout[é|e]/.test(lcText)) {
+    addDietary("sans_sel_ajoute");
+  }
+  if (/halal/.test(lcText)) {
+    addDietary("halal");
+  }
+  if (/(casher|kasher)/.test(lcText)) {
+    addDietary("casher");
+  }
+
+  // --- Température de service
+  const servingTemperatures: ParsedServingTemperature[] = [];
+  const addServing = (value: ParsedServingTemperature) => {
+    if (!servingTemperatures.includes(value)) {
+      servingTemperatures.push(value);
+    }
+  };
+
+  if (
+    /servir[^.]*chaud|d[ée]guster[^.]*chaud|bien chaud/.test(lcText)
+  ) {
+    addServing("chaud");
+  }
+  if (/servir[^.]*ti[èe]de|ti[èe]de/.test(lcText)) {
+    addServing("tiede");
+  }
+  if (/temp[ée]rature ambiante/.test(lcText)) {
+    addServing("ambiante");
+  }
+  if (/servir[^.]*froid|servir[^.]*bien frais|bien frais/.test(lcText)) {
+    addServing("froid");
+  }
+  if (servingTemperatures.length > 1) {
+    addServing("au_choix");
+  }
+
+  // --- Modes de conservation
+  const storageModes: ParsedStorageMode[] = [];
+  const addStorageMode = (value: ParsedStorageMode) => {
+    if (!storageModes.includes(value)) {
+      storageModes.push(value);
+    }
+  };
+
+  if (/r[ée]frig[ée]rateur|frigo|au frais/.test(lcText)) {
+    addStorageMode("refrigerateur");
+  }
+  if (/congel[ée]|cong[ée]lateur|congelateur/.test(lcText)) {
+    addStorageMode("congelateur");
+  }
+  if (/temp[ée]rature ambiante/.test(lcText)) {
+    addStorageMode("ambiante");
+  }
+  if (/sous vide/.test(lcText)) {
+    addStorageMode("sous_vide");
+  }
+  if (/bo[iî]te herm[ée]tique|tupperware/.test(lcText)) {
+    addStorageMode("boite_hermetique");
+  }
+  if (storageModes.length > 1) {
+    addStorageMode("au_choix");
+  }
+
   return {
     title,
     description,
     servings,
     prepTimeMin,
     cookTimeMin,
+    restTimeMin,
     ingredientsText,
     instructionsText,
     difficulty,
@@ -388,8 +603,13 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     utensils: utensils.length > 0 ? Array.from(new Set(utensils)) : undefined,
     chefTips,
     culturalHistory,
-    techniques: undefined,
-    nutritionalNotes: undefined
+    techniques,
+    nutritionalNotes,
+    dietaryLabels: dietaryLabels.length > 0 ? dietaryLabels : undefined,
+    servingTemperatures:
+      servingTemperatures.length > 0 ? servingTemperatures : undefined,
+    storageModes: storageModes.length > 0 ? storageModes : undefined,
+    sourceInfo
   };
 };
 

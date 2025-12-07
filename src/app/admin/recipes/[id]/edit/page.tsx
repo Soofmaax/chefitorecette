@@ -525,6 +525,12 @@ const AdminEditRecipePage = () => {
     ) {
       setValue("cook_time_min", parsed.cookTimeMin, { shouldDirty: true });
     }
+    if (
+      typeof parsed.restTimeMin === "number" &&
+      !Number.isNaN(parsed.restTimeMin)
+    ) {
+      setValue("rest_time_min", parsed.restTimeMin, { shouldDirty: true });
+    }
     if (parsed.ingredientsText) {
       setValue("ingredients_text", parsed.ingredientsText, {
         shouldDirty: true
@@ -569,6 +575,27 @@ const AdminEditRecipePage = () => {
       setValue("nutritional_notes", parsed.nutritionalNotes, {
         shouldDirty: true
       });
+    }
+    if (parsed.dietaryLabels && parsed.dietaryLabels.length > 0) {
+      setValue("dietary_labels", parsed.dietaryLabels, {
+        shouldDirty: true
+      });
+    }
+    if (
+      parsed.servingTemperatures &&
+      parsed.servingTemperatures.length > 0
+    ) {
+      setValue("serving_temperatures", parsed.servingTemperatures, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageModes && parsed.storageModes.length > 0) {
+      setValue("storage_modes", parsed.storageModes, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.sourceInfo) {
+      setValue("source_info", parsed.sourceInfo, { shouldDirty: true });
     }
 
     if (parsed.utensils && parsed.utensils.length > 0 && utensilsCatalog.length > 0) {
