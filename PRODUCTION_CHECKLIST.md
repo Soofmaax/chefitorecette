@@ -157,16 +157,21 @@ En prod :
 ### 5.1. Flux Recettes
 
 - [ ] **Créer une recette depuis `/admin/recipes/create`**
-  - Saisir infos de base, ingrédients, instructions, SEO.
+  - Coller le texte brut complet dans la section “0. Import depuis un texte brut” puis cliquer sur “Pré‑remplir depuis le texte”.
+  - Vérifier/ajuster les champs pré‑remplis (titre, description, temps, portions, ingrédients texte, instructions, conservation, labels, etc.).
+  - Ajouter une image.
   - Enregistrer → vérifier qu’elle apparaît dans `/admin/recipes`.
 - [ ] **Éditer une recette**
-  - Modifier description, image, SEO, tags, etc.
-  - Sauvegarder → pas d’erreur, messages corrects.
+  - Aller sur `/admin/recipes/[id]/edit`.
+  - Utiliser si besoin “Pré‑remplir depuis le texte” pour re‑analyser une version à jour du texte brut.
+  - Utiliser le bouton “Pré‑remplir ingrédients / étapes / concepts” pour générer automatiquement les ingrédients normalisés, les étapes enrichies et les concepts liés.
+  - Sauvegarder les ingrédients/étapes, corriger les concepts si nécessaire, puis vérifier description, image, SEO, tags, etc.
 - [ ] **Validation pre-publish**
-  - Essayer de passer directement une recette en `published` avec des champs manquants.
+  - Essayer de passer directement une recette en `published` avec des champs essentiels manquants (description, ingrédients texte, instructions détaillées, image).
   - Vérifier que la modale de blocage s’ouvre avec la liste des critères manquants.
 - [ ] **Recette complète (éditoriale + RAG)**
   - Remplir tous les champs éditoriaux & SEO requis + ingrédients normalisés + steps enrichies + concepts.
+  - Remarque : la publication n’est plus bloquée par l’absence d’ingrédients normalisés, d’étapes enrichies ou de concepts ; ces éléments restent toutefois recommandés pour une recette “complète Chefito” et un bon RAG.
   - Passer le statut en `published` → succès.
 
 ### 5.2. Flux Auth / Mot de passe
