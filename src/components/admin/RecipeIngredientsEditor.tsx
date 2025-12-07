@@ -107,8 +107,7 @@ const fetchNormalizedIngredients = async (
 export const RecipeIngredientsEditor = React.forwardRef<
   RecipeIngredientsEditorHandle,
   RecipeIngredientsEditorProps
->(({ recipeId }, ref) _code=>new </{
-=> {
+>(({ recipeId }, ref) => {
   const queryClient = useQueryClient();
   const {
     data: rows,

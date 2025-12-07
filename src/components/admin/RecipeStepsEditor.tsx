@@ -81,11 +81,14 @@ export const RecipeStepsEditor = React.forwardRef<
     queryFn: () => fetchSteps(recipeId)
   });
 
-  const [localSteps, setLocalSteps] = useStat<<StepData[]>([]);
+  const [localSteps, setLocalSteps] = useState<StepData[]>([]);
   const [prefillError, setPrefillError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (steps);
+    if (steps) {
+      setLocalSteps(steps);
+    }
+  }, [steps]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

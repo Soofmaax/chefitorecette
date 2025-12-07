@@ -188,23 +188,6 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     }
   }
 
-  // --- Bloc Ingrédients -> ingredientsTextkMatch = text.match(
-    /cuisson[^:\n]*:\s*(\d+)(?:\s*(?:à|\-)\s*(\d+))?\s*(?:min|minutes?)/i
-  );
-  if (cookMatch) {
-    const a = Number(cookMatch[1]);
-    const rawB = cookMatch[2];
-    let b: number | null = null;
-    if (rawB) {
-      const parsedB = Number(rawB);
-      if (!Number.isNaN(parsedB)) {
-        b = parsedB;
-      }
-    }
-    cookTimeMin =
-      typeof b === "number" ? Math.round((a + b) / 2) : a;
-  }
-
   // --- Bloc Ingrédients -> ingredientsText
   if (idxIngr !== -1) {
     let ingredientsEndIdx = lines.length;
