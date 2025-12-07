@@ -538,6 +538,42 @@ const AdminEditRecipePage = () => {
     if (parsed.difficulty) {
       setValue("difficulty", parsed.difficulty, { shouldDirty: true });
     }
+    if (
+      typeof parsed.storageDurationDays === "number" &&
+      !Number.isNaN(parsed.storageDurationDays)
+    ) {
+      setValue("storage_duration_days", parsed.storageDurationDays, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageInstructions) {
+      setValue("storage_instructions", parsed.storageInstructions, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      setValue("tags", parsed.tags, { shouldDirty: true });
+    }
+
+    if (parsed.utensils && parsed.utensils.length > 0 && utensilsCatalog.length > 0) {
+      const lowerCatalog = utensilsCatalog.map((u) => ({
+        key: u.key,
+        label: u.label,
+        lcLabel: u.label.toLowerCase()
+      }));
+      const nextKeys = new Set(selectedUtensils);
+      parsed.utensils.forEach((name) => {
+        const lcName = name.toLowerCase();
+        const match = lowerCatalog.find(
+          (u) =>
+            u.lcLabel.includes(lcName) || lcName.includes(u.lcLabel)
+        );
+        if (match) {
+          nextKeys.add(match.key);
+        }
+      });
+      setSelectedUtensils(Array.from(nextKeys));
+    }
 
     setImportMessage(
       "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."

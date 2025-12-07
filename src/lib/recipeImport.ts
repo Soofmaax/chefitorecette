@@ -9,6 +9,11 @@ export interface ParsedRecipeFromText {
   ingredientsText?: string;
   instructionsText?: string;
   difficulty?: ParsedDifficulty;
+  // Informations complémentaires pour automatiser davantage le formulaire
+  storageDurationDays?: number;
+  storageInstructions?: string;
+  tags?: string[];
+  utensils?: string[];
 }
 
 /**
@@ -212,6 +217,99 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     }
   }
 
+  // --- Bloc Conservation -> storageDurationDays / storageInstructions
+  let storageDurationDays: number | undefined;
+  let storageInstructions: string | undefined;
+  const idxCons = lines.findIndex((l) =>
+    /conservation/i.test(stripIconPrefix(l))
+  );
+  if (idxCons !== -1) {
+    let endIdx = lines.length;
+    for (let i = idxCons + 1; i < lines.length; i += 1) {
+      const s = stripIconPrefix(lines[i]).toLowerCase();
+      if (/meal prep/.test(s) || /anecdote/.test(s) || /tag trello/.test(s)) {
+        endIdx = i;
+        break;
+      }
+    }
+    const consLines = lines
+      .slice(idxCons, endIdx)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+    if (consLines.length > 0) {
+      storageInstructions = consLines.join(" ");
+    }
+
+    const consText = consLines.join(" ");
+    const daysMatch = consText.match(/(\d+)\s*(?:jour|jours|j)\b/i);
+    if (daysMatch) {
+      const d = Number(daysMatch[1]);
+      if (!Number.isNaN(d)) {
+        storageDurationDays = d;
+      }
+    } else {
+      const hoursMatch = consText.match(/(\d+)\s*h\b/i);
+      if (hoursMatch) {
+        const h = Number(hoursMatch[1]);
+        if (!Number.isNaN(h)) {
+          const approxDays = Math.max(1, Math.round(h / 24));
+          storageDurationDays = approxDays;
+        }
+      }
+    }
+  }
+
+  // --- Tags simples (ex. "Tag Trello : ...")
+  const tags: string[] = [];
+  lines.forEach((l) => {
+    const s = stripIconPrefix(l);
+    const match = s.match(/tag\s+trello\s*:\s*(.+)$/i);
+    if (match) {
+      const tagRaw = match[1].trim();
+      if (tagRaw) {
+        tags.push(tagRaw);
+      }
+    }
+  });
+
+  // --- Ustensiles (ex. "Ustensiles nécessaires : ...")
+  const utensils: string[] = [];
+  const idxUst = lines.findIndex((l) =>
+    /ustensiles/i.test(stripIconPrefix(l))
+  );
+  if (idxUst !== -1) {
+    let endIdx = lines.length;
+    for (let i = idxUst + 1; i < lines.length; i += 1) {
+      const s = stripIconPrefix(lines[i]).toLowerCase();
+      if (
+        /temps de pr[eé]paration/.test(s) ||
+        /temps de cuisson/.test(s) ||
+        /pr[eé]paration/.test(s) ||
+        /conservation/.test(s) ||
+        /meal prep/.test(s) ||
+        /anecdote/.test(s) ||
+        /tag trello/.test(s)
+      ) {
+        endIdx = i;
+        break;
+      }
+    }
+
+    const ustLines = lines
+      .slice(idxUst + 1, endIdx)
+      .map((l) => stripIconPrefix(l))
+      .filter((l) => l.length > 0);
+
+    ustLines.forEach((raw) => {
+      // Exemple : "1 couteau économe" -> "couteau économe"
+      const m = raw.match(/^(\d+(?:[.,]\d+)?)\s+(.*)$/);
+      const label = m ? m[2].trim() : raw.trim();
+      if (label) {
+        utensils.push(label);
+      }
+    });
+  }
+
   return {
     title,
     description,
@@ -220,7 +318,11 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     cookTimeMin,
     ingredientsText,
     instructionsText,
-    difficulty
+    difficulty,
+    storageDurationDays,
+    storageInstructions,
+    tags: tags.length > 0 ? Array.from(new Set(tags)) : undefined,
+    utensils: utensils.length > 0 ? Array.from(new Set(utensils)) : undefined
   };
 };
 

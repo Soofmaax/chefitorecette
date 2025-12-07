@@ -352,6 +352,22 @@ const AdminCreateRecipePage = () => {
     if (parsed.difficulty) {
       setValue("difficulty", parsed.difficulty, { shouldDirty: true });
     }
+    if (
+      typeof parsed.storageDurationDays === "number" &&
+      !Number.isNaN(parsed.storageDurationDays)
+    ) {
+      setValue("storage_duration_days", parsed.storageDurationDays, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.storageInstructions) {
+      setValue("storage_instructions", parsed.storageInstructions, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      setValue("tags", parsed.tags, { shouldDirty: true });
+    }
 
     setImportMessage(
       "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."
