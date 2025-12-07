@@ -10,6 +10,7 @@ import { recipeSchema, RecipeFormValues } from "@/types/forms";
 import { difficultyTemplates } from "@/lib/recipesDifficulty";
 import { uploadRecipeImage } from "@/lib/storage";
 import { generateSlug } from "@/lib/slug";
+import { parseRecipeFromRawText } from "@/lib/recipeImport";
 import { TagInput } from "@/components/ui/TagInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -127,6 +128,9 @@ const AdminCreateRecipePage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rawImportText, setRawImportText] = useState("");
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(nu_codellnew)</;
 
   const {
     control,
@@ -290,6 +294,70 @@ const AdminCreateRecipePage = () => {
     }
   }, [watchedDifficulty, watchedDifficultyDetailed, setValue]);
 
+  const handleImportFromText = () => {
+    setImportMessage(null);
+    setImportError(null);
+
+    const trimmed = rawImportText.trim();
+    if (!trimmed) {
+      setImportError("Collez d'abord le texte complet de la recette dans la zone ci-dessus.");
+      return;
+    }
+
+    const parsed = parseRecipeFromRawText(trimmed);
+
+    if (
+      !parsed.title &&
+      !parsed.description &&
+      !parsed.ingredientsText &&
+      !parsed.instructionsText
+    ) {
+      setImportError(
+        "Impossible d'analyser ce texte. Vérifiez qu'il contient bien des sections Ingrédients / Préparation."
+      );
+      return;
+    }
+
+    if (parsed.title) {
+      setValue("title", parsed.title, { shouldDirty: true });
+    }
+    if (parsed.description) {
+      setValue("description", parsed.description, { shouldDirty: true });
+    }
+    if (typeof parsed.servings === "number" && !Number.isNaN(parsed.servings)) {
+      setValue("servings", parsed.servings, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.prepTimeMin === "number" &&
+      !Number.isNaN(parsed.prepTimeMin)
+    ) {
+      setValue("prep_time_min", parsed.prepTimeMin, { shouldDirty: true });
+    }
+    if (
+      typeof parsed.cookTimeMin === "number" &&
+      !Number.isNaN(parsed.cookTimeMin)
+    ) {
+      setValue("cook_time_min", parsed.cookTimeMin, { shouldDirty: true });
+    }
+    if (parsed.ingredientsText) {
+      setValue("ingredients_text", parsed.ingredientsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.instructionsText) {
+      setValue("instructions_detailed", parsed.instructionsText, {
+        shouldDirty: true
+      });
+    }
+    if (parsed.difficulty) {
+      setValue("difficulty", parsed.difficulty, { shouldDirty: true });
+    }
+
+    setImportMessage(
+      "Analyse terminée : les champs principaux ont été pré-remplis. Vérifiez-les avant d'enregistrer."
+    );
+  };
+
   const onSubmit = async (values: RecipeFormValues) => {
     setMessage(null);
     setErrorMessage(null);
@@ -424,6 +492,37 @@ const AdminCreateRecipePage = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="card space-y-6 px-5 py-5"
       >
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            0. Import depuis un texte brut (optionnel)
+          </h2>
+          <p className="text-xs text-slate-500">
+            Colle ici le texte complet de la recette (histoire, ingrédients, préparation…).
+            Un analyseur simple tentera de pré-remplir le formulaire (titre, temps, ingrédients, étapes).
+          </p>
+          <textarea
+            rows={8}
+            className="mt-2 w-full font-mono text-xs"
+            placeholder="Collez ici la recette brute (copiée depuis votre doc, Trello, etc.)…"
+            value={rawImportText}
+            onChange={(e) => setRawImportText(e.target.value)}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+              onClick={handleImportFromText}
+            >
+              Pré-remplir depuis le texte
+            </Button>
+            {importMessage && (
+              <p className="text-emerald-300">{importMessage}</p>
+            )}
+            {importError && <p className="text-red-300">{importError}</p>}
+          </div>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-100">
             1. Infos de base
