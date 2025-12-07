@@ -223,3 +223,135 @@ export const parseRecipeFromRawText = (raw: string): ParsedRecipeFromText => {
     difficulty
   };
 };
+
+export interface ParsedIngredientLine {
+  originalText: string;
+  quantity?: number;
+  unit?: string;
+  name: string;
+}
+
+const parseQuantity = (raw: string): number | undefined => {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+
+  // Fractions simples (ex. 1/2)
+  const fracMatch = trimmed.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (fracMatch) {
+    const num = Number(fracMatch[1]);
+    const den = Number(fracMatch[2]);
+    if (!Number.isNaN(num) && !Number.isNaN(den) && den !== 0) {
+      return num / den;
+    }
+    return undefined;
+  }
+
+  const normalized = trimmed.replace(",", ".");
+  const n = Number(normalized);
+  if (Number.isNaN(n)) {
+    return undefined;
+  }
+  return n;
+};
+
+const normalizeUnitToken = (raw: string): string | undefined => {
+  const base = raw.trim().toLowerCase().replace(/\./g, "");
+  if (!base) return undefined;
+
+  if (base === "g" || base === "gr" || base === "gramme" || base === "grammes") {
+    return "g";
+  }
+  if (base === "kg" || base === "kilogramme" || base === "kilogrammes") {
+    return "kg";
+  }
+  if (base === "mg") {
+    return "mg";
+  }
+  if (base === "ml") {
+    return "ml";
+  }
+  if (base === "cl") {
+    return "cl";
+  }
+  if (base === "l" || base === "litre" || base === "litres") {
+    return "l";
+  }
+  if (base === "botte" || base === "bottes") {
+    return "botte";
+  }
+  if (base === "pincee" || base === "pincée" || base === "pincees" || base === "pincées") {
+    return "pincée";
+  }
+
+  return undefined;
+};
+
+/**
+ * Transforme un bloc d'ingrédients texte (une ligne par ingrédient)
+ * en structure (quantité, unité, nom) pour pré-remplir les ingrédients normalisés.
+ */
+export const parseIngredientsTextToStructured = (
+  ingredientsText: string
+): ParsedIngredientLine[] => {
+  const text = normalizeText(ingredientsText);
+  if (!text) return [];
+
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "");
+
+  const result: ParsedIngredientLine[] = [];
+
+  lines.forEach((rawLine) => {
+    const line = stripIconPrefix(rawLine);
+    if (!line) return;
+
+    // Ignorer les en-têtes de section ou les options
+    if (/^\[.*\]$/.test(line)) return;
+    if (/^option\b/i.test(line)) return;
+
+    let quantity: number | undefined;
+    let unit: string | undefined;
+    let name: string;
+
+    // Quantité au début de la ligne
+    const quantityMatch = line.match(
+      /^(\d+(?:[.,]\d+)?|\d+\s*\/\s*\d+)\s+(.*)$/
+    );
+    if (quantityMatch) {
+      quantity = parseQuantity(quantityMatch[1]);
+      const rest = quantityMatch[2];
+
+      // Essaye de détecter une unité simple comme premier token
+      const unitMatch = rest.match(/^([A-Za-zÀ-ÿ\.]+)\s+(.*)$/);
+      if (unitMatch) {
+        const normalizedUnit = normalizeUnitToken(unitMatch[1]);
+        if (normalizedUnit) {
+          unit = normalizedUnit;
+          name = unitMatch[2].trim();
+        } else {
+          name = rest.trim();
+        }
+      } else {
+        name = rest.trim();
+      }
+    } else {
+      // Pas de quantité détectée → tout est le nom
+      name = line;
+    }
+
+    if (!name) {
+      return;
+    }
+
+    result.push({
+      originalText: rawLine,
+      quantity,
+      unit,
+      name
+    });
+  });
+
+  return result;
+};
