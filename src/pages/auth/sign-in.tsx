@@ -41,7 +41,7 @@ const SignInPage = () => {
 
   useEffect(() => {
     if (user) {
-      router.replace("/admin/dashboard");
+      router.replace("/admin/recipes");
     }
   }, [user, router]);
 
@@ -77,7 +77,7 @@ const SignInPage = () => {
         return;
       }
 
-      router.replace("/admin/dashboard");
+      router.replace("/admin/recipes");
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("[SignIn] onSubmit error", err);

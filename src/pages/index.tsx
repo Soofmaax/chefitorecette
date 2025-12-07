@@ -8,7 +8,7 @@ const HomePage = () => {
 
   useEffect(() => {
     if (user?.appRole === "admin") {
-      router.replace("/admin/dashboard");
+      router.replace("/admin/recipes");
     } else {
       router.replace("/dashboard");
     }
